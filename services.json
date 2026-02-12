@@ -1,31 +1,90 @@
 {
   "categories": [
     {
-      "name": "Security",
+      "name": "Services",
       "services": [
         {
-          "name": "Vault",
-          "url": "https://vault.pmserver.us",
-          "icon": "\ud83d\udd10",
+          "name": "Vaultwarden",
+          "url": "https://vault.pmserver.us/#/vault",
+          "icon": "🔐",
           "shortcut": 1
-        }
-      ]
-    },
-    {
-      "name": "Productivity",
-      "services": [
+        },
         {
-          "name": "Files",
-          "url": "https://files.pmserver.us",
-          "icon": "\ud83d\udcc1",
+          "name": "Nextcloud",
+          "url": "https://files.pmserver.us/",
+          "icon": "📁",
           "shortcut": 2
         },
         {
           "name": "n8n",
-          "url": "https://n8n.pmserver.us",
-          "icon": "\ud83e\udd16",
+          "url": "https://n8n.pmserver.us/",
+          "icon": "🤖",
           "shortcut": 3
         }
+      ]
+    },
+    {
+      "name": "Server Management",
+      "services": [
+        {
+          "name": "Portainer",
+          "url": "https://100.116.108.52:9443/#!/home",
+          "icon": "🐳",
+          "shortcut": 4
+        },
+        {
+          "name": "Tailscale",
+          "url": "https://login.tailscale.com/admin/machines?refreshed=true",
+          "icon": "🔗",
+          "shortcut": 5
+        }
+      ]
+    },
+    {
+      "name": "Domain/DNS",
+      "services": [
+        {
+          "name": "Namecheap",
+          "url": "https://www.namecheap.com/myaccount",
+          "icon": "🌐",
+          "shortcut": 6
+        },
+        {
+          "name": "Cloudflare Tunnels",
+          "url": "https://one.dash.cloudflare.com/REDACTED_CF_ACCOUNT_ID                                                                                                                                                                                   /networks/connectors/cloudflare-tunnels/cfd_tunnel/475355a4-afce-4fc4-8b90-cd1e5da2fb60/edit?tab=publicHostname",
+          "icon": "🚇",
+          "shortcut": 7
+        },
+        {
+          "name": "Cloudflare DNS",
+          "url": "https://dash.cloudflare.com/REDACTED_CF_ACCOUNT_ID                                                                                                                                                                                   /pmserver.us/dns/records",
+          "icon": "📋",
+          "shortcut": 8
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "name": "Developer",
+      "items": [
+        { "name": "GitHub", "url": "https://github.com" },
+        { "name": "Grok", "url": "https://grok.com" }
+      ]
+    },
+    {
+      "name": "Social",
+      "items": [
+        { "name": "X", "url": "https://x.com" },
+        { "name": "LinkedIn", "url": "https://linkedin.com" }
+      ]
+    },
+    {
+      "name": "Entertainment",
+      "items": [
+        { "name": "YouTube", "url": "https://youtube.com" },
+        { "name": "Rumble", "url": "https://rumble.com" },
+        { "name": "Netflix", "url": "https://netflix.com" }
       ]
     }
   ]

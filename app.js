@@ -17,8 +17,10 @@
             allServices = config.categories.flatMap(c =>
                 c.services.map(s => ({ ...s, category: c.name }))
             );
+            renderBraveSearch();
             renderSearchBar();
             renderServices(config.categories);
+            renderLinks(config.links || []);
             checkAllStatuses();
             setInterval(checkAllStatuses, STATUS_CHECK_INTERVAL);
         } catch (e) {
@@ -71,7 +73,27 @@
         greetingEl.textContent = getGreeting(now.getHours());
     }
 
-    // --- Search ---
+    // --- Brave Search ---
+
+    function renderBraveSearch() {
+        var wrapper = document.getElementById('brave-search-wrapper');
+        var form = document.createElement('form');
+        form.id = 'brave-search';
+        form.action = 'https://search.brave.com/search';
+        form.method = 'GET';
+        form.target = '_blank';
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.name = 'q';
+        input.placeholder = 'Search with Brave...';
+        input.autocomplete = 'off';
+
+        form.appendChild(input);
+        wrapper.appendChild(form);
+    }
+
+    // --- Service Filter ---
 
     function renderSearchBar() {
         const wrapper = document.getElementById('search-wrapper');
@@ -160,6 +182,41 @@
         }
 
         return a;
+    }
+
+    // --- Render Links ---
+
+    function renderLinks(linkGroups) {
+        var container = document.getElementById('links');
+        if (!linkGroups.length) return;
+
+        container.innerHTML = '';
+        var section = document.createElement('div');
+        section.className = 'links-section';
+
+        linkGroups.forEach(function (group) {
+            var category = document.createElement('div');
+            category.className = 'links-category';
+
+            var label = document.createElement('span');
+            label.className = 'links-label';
+            label.textContent = group.name;
+            category.appendChild(label);
+
+            group.items.forEach(function (link) {
+                var a = document.createElement('a');
+                a.href = link.url;
+                a.className = 'link-item';
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.textContent = link.name;
+                category.appendChild(a);
+            });
+
+            section.appendChild(category);
+        });
+
+        container.appendChild(section);
     }
 
     // --- Status Checks ---
@@ -251,7 +308,9 @@
     function setupKeyboardNav() {
         document.addEventListener('keydown', function (e) {
             var searchInput = document.getElementById('search');
-            var isTyping = document.activeElement === searchInput;
+            var braveInput = document.querySelector('#brave-search input');
+            var isTyping = document.activeElement === searchInput ||
+                           document.activeElement === braveInput;
 
             // "/" focuses search
             if (e.key === '/' && !isTyping) {
@@ -265,6 +324,7 @@
                 searchInput.value = '';
                 filterServices('');
                 searchInput.blur();
+                if (braveInput) braveInput.blur();
                 return;
             }
 
