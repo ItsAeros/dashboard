@@ -16,31 +16,78 @@ body {
     width: 100%;
 }
 
+/* --- Top Panel (sticky) --- */
+#top-panel {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #121212;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 12px 0;
+    border-bottom: 1px solid #2a2a2a;
+    margin-bottom: 20px;
+}
+
 /* --- Header / Clock --- */
 #header {
-    text-align: center;
-    margin-bottom: 10px;
+    text-align: left;
+    flex-shrink: 0;
+}
+
+.clock .greeting {
+    font-size: 1.1em;
+    margin: 0;
 }
 
 .clock .time {
-    font-size: 2.5em;
+    font-size: 1.6em;
     font-weight: 300;
     letter-spacing: 0.05em;
 }
 
 .clock .date {
-    font-size: 1em;
+    font-size: 0.85em;
     color: #888;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
-.clock .greeting {
-    font-size: 1.4em;
-    margin-top: 8px;
-    margin-bottom: 10px;
+/* --- Brave Search --- */
+#brave-search-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
 }
 
-/* --- Search --- */
+#brave-search {
+    width: 100%;
+}
+
+#brave-search input {
+    background: #1a1a2e;
+    border: 2px solid #fb542b;
+    border-radius: 24px;
+    color: #e0e0e0;
+    padding: 10px 20px;
+    font-size: 1em;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#brave-search input:focus {
+    border-color: #ff7654;
+    box-shadow: 0 0 12px rgba(251, 84, 43, 0.3);
+}
+
+#brave-search input::placeholder {
+    color: #777;
+}
+
+/* --- Service Filter --- */
 #search-wrapper {
     text-align: center;
     margin-bottom: 30px;
@@ -70,10 +117,10 @@ body {
 /* --- Stats Widget --- */
 #stats-widget {
     display: flex;
-    justify-content: center;
-    gap: 20px;
-    flex-wrap: wrap;
-    margin-bottom: 30px;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+    text-align: right;
 }
 
 #stats-widget:empty {
@@ -81,31 +128,34 @@ body {
 }
 
 .stat-item {
-    background: #1e1e1e;
-    border-radius: 8px;
-    padding: 12px 20px;
-    text-align: center;
-    min-width: 120px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    background: none;
 }
 
 .stat-label {
-    font-size: 0.8em;
+    font-size: 0.7em;
     color: #888;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    min-width: 40px;
+    text-align: right;
 }
 
 .stat-value {
-    font-size: 1.4em;
-    margin-top: 4px;
+    font-size: 0.85em;
+    white-space: nowrap;
 }
 
 .stat-bar {
-    height: 4px;
+    height: 3px;
     background: #333;
     border-radius: 2px;
-    margin-top: 6px;
+    width: 60px;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .stat-bar-fill {
@@ -195,27 +245,85 @@ body {
     box-shadow: 0 0 6px rgba(244, 67, 54, 0.5);
 }
 
+/* --- Links Section --- */
+.links-section {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #2a2a2a;
+}
+
+.links-category {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.links-label {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #888;
+    min-width: 100px;
+}
+
+.link-item {
+    color: #8ab4f8;
+    text-decoration: none;
+    font-size: 0.95em;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: #1e1e1e;
+    transition: background 0.2s;
+}
+
+.link-item:hover {
+    background: #2a2a2a;
+}
+
 /* --- Visibility --- */
 .hidden {
     display: none !important;
 }
 
 /* --- Responsive --- */
+@media (max-width: 768px) {
+    #top-panel {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    #header {
+        text-align: center;
+    }
+
+    #brave-search-wrapper {
+        justify-content: center;
+    }
+
+    #stats-widget {
+        align-items: center;
+        text-align: center;
+    }
+
+    .stat-label {
+        text-align: left;
+    }
+}
+
 @media (max-width: 600px) {
     .grid {
         grid-template-columns: 1fr;
     }
 
     .clock .time {
-        font-size: 2em;
+        font-size: 1.4em;
     }
 
-    #stats-widget {
-        gap: 10px;
-    }
-
-    .stat-item {
-        min-width: 80px;
-        padding: 8px 12px;
+    .links-label {
+        min-width: auto;
+        width: 100%;
     }
 }
