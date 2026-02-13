@@ -19,6 +19,14 @@
     color: #8ab4f8;
     text-decoration: none;
     font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.back-link .header-logo {
+    width: 28px;
+    height: 28px;
 }
 
 .back-link:hover {
