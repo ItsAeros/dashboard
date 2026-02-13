@@ -1,6 +1,6 @@
 (function () {
     const CONFIG_URL = 'services.json';
-    const STATS_URL = 'stats.json';
+    const STATS_URL = '/api/stats';
     const STATUS_CHECK_INTERVAL = 60000;
     const CLOCK_INTERVAL = 1000;
 
