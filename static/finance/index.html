@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance - pmserver</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/finance/finance.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="finance-nav">
+            <a href="/" class="back-link">← Dashboard</a>
+            <h1>Finance</h1>
+        </nav>
+
+        <!-- Login gate -->
+        <div id="login-gate">
+            <form id="login-form">
+                <input type="password" id="login-password" placeholder="Dashboard password" autocomplete="current-password">
+                <button type="submit">Log in</button>
+            </form>
+            <p id="login-error" class="error hidden"></p>
+        </div>
+
+        <!-- Main finance app (hidden until logged in) -->
+        <div id="finance-app" class="hidden">
+            <div class="finance-actions">
+                <button id="btn-sync" class="btn">Sync All</button>
+                <button id="btn-connect" class="btn btn-primary">Connect Bank</button>
+            </div>
+
+            <!-- Net worth -->
+            <div id="net-worth" class="card-panel">
+                <div class="panel-label">Net Worth</div>
+                <div class="panel-value" id="net-worth-value">--</div>
+            </div>
+
+            <!-- Accounts -->
+            <section id="accounts-section">
+                <h2>Accounts</h2>
+                <div id="accounts-grid" class="grid"></div>
+                <p id="no-accounts" class="muted hidden">No accounts linked yet. Click "Connect Bank" to get started.</p>
+            </section>
+
+            <!-- Monthly overview -->
+            <section id="monthly-section">
+                <h2>Monthly Overview</h2>
+                <div id="monthly-chart"></div>
+            </section>
+
+            <!-- Spending by category -->
+            <section id="category-section">
+                <h2>Spending by Category (Last 30 Days)</h2>
+                <div id="category-chart"></div>
+            </section>
+
+            <!-- Transactions -->
+            <section id="transactions-section">
+                <h2>Recent Transactions</h2>
+                <div class="transaction-filters">
+                    <input type="date" id="filter-start" title="Start date">
+                    <input type="date" id="filter-end" title="End date">
+                    <button id="btn-filter" class="btn btn-small">Filter</button>
+                </div>
+                <table id="transactions-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th class="amount-col">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-body"></tbody>
+                </table>
+                <p id="no-transactions" class="muted hidden">No transactions yet.</p>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+    <script src="/finance/finance.js"></script>
+</body>
+</html>

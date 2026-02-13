@@ -13,12 +13,21 @@ Self-hosted service dashboard with Python backend, served at pmserver.us.
 
 ```
 backend/
-  main.py              — FastAPI entry point, mounts static files
-  config.py            — Settings from .env
-  routers/stats.py     — GET /api/stats
-  services/stats_collector.py — System stats via psutil
+  main.py                  — FastAPI entry point, mounts static files
+  config.py                — Settings from .env
+  auth.py                  — Password login + bearer token auth
+  database.py              — SQLite setup + table creation
+  routers/
+    stats.py               — GET /api/stats
+    auth.py                — POST /api/auth/login
+    finance.py             — /api/finance/* (accounts, transactions, Plaid)
+  services/
+    stats_collector.py     — System stats via psutil
+    plaid_client.py        — Plaid API wrapper
 static/
   index.html, style.css, app.js, services.json
+  finance/
+    index.html, finance.css, finance.js
 ```
 
 ## Running
@@ -30,10 +39,16 @@ uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 
 API docs at http://localhost:8000/api/docs
 
+## Setup
+
+1. Copy `.env.example` to `.env` and fill in values
+2. Set `DASHBOARD_PASSWORD` for finance page auth
+3. Set Plaid credentials when ready to connect bank accounts
+
 ## Key patterns
 
 - Services and links are config-driven via `static/services.json`
-- `app.js` fetches `/api/stats` for system stats (replaced old `stats.json` file)
-- Status checks use `fetch()` with `mode: 'no-cors'` HEAD requests
-- Keyboard shortcuts: `/` = filter, `Escape` = clear, `1-9` = open services, arrows = navigate
+- `app.js` fetches `/api/stats` for system stats
+- Finance page at `/finance/` — requires password auth, uses Plaid for bank connections
+- Public endpoints (stats, dashboard): no auth. Finance endpoints: bearer token auth.
 - All secrets in `.env` (gitignored), template in `.env.example`

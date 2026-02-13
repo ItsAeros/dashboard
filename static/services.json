@@ -62,6 +62,17 @@
           "shortcut": 8
         }
       ]
+    },
+    {
+      "name": "Apps",
+      "services": [
+        {
+          "name": "Finance",
+          "url": "/finance/",
+          "icon": "💰",
+          "shortcut": 9
+        }
+      ]
     }
   ],
   "links": [
