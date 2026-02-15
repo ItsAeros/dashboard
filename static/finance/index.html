@@ -17,9 +17,17 @@
 
         <!-- Login gate -->
         <div id="login-gate">
+            <!-- Step 1: username + password -->
             <form id="login-form">
-                <input type="password" id="login-password" placeholder="Dashboard password" autocomplete="current-password">
+                <input type="text" id="login-username" placeholder="Username" autocomplete="username">
+                <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
                 <button type="submit">Log in</button>
+            </form>
+            <!-- Step 2: TOTP code (shown after credentials pass) -->
+            <form id="totp-form" class="hidden">
+                <p class="totp-prompt">Enter the 6-digit code from your authenticator app</p>
+                <input type="text" id="login-totp" placeholder="2FA code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+                <button type="submit">Verify</button>
             </form>
             <p id="login-error" class="error hidden"></p>
         </div>

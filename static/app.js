@@ -153,8 +153,11 @@
         var a = document.createElement('a');
         a.href = service.url;
         a.className = 'card';
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
+        // Open external links in new tab, internal links in same tab
+        if (!service.url.startsWith('/')) {
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+        }
         a.setAttribute('data-name', service.name.toLowerCase());
         if (service.shortcut) {
             a.setAttribute('data-shortcut', service.shortcut);
@@ -332,7 +335,11 @@
             if (!isTyping && e.key >= '1' && e.key <= '9') {
                 var card = document.querySelector('.card[data-shortcut="' + e.key + '"]:not(.hidden)');
                 if (card) {
-                    window.open(card.href, '_blank', 'noopener,noreferrer');
+                    if (card.href.startsWith(location.origin + '/')) {
+                        location.href = card.href;
+                    } else {
+                        window.open(card.href, '_blank', 'noopener,noreferrer');
+                    }
                 }
                 return;
             }
