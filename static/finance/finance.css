@@ -40,13 +40,15 @@
     text-align: center;
 }
 
-#login-form {
+#login-form,
+#totp-form {
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    gap: 10px;
 }
 
-#login-form input {
-    flex: 1;
+#login-form input,
+#totp-form input {
     background: #1e1e1e;
     border: 1px solid #333;
     border-radius: 8px;
@@ -56,11 +58,13 @@
     outline: none;
 }
 
-#login-form input:focus {
+#login-form input:focus,
+#totp-form input:focus {
     border-color: #555;
 }
 
-#login-form button {
+#login-form button,
+#totp-form button {
     background: #4caf50;
     color: #fff;
     border: none;
@@ -70,8 +74,15 @@
     cursor: pointer;
 }
 
-#login-form button:hover {
+#login-form button:hover,
+#totp-form button:hover {
     background: #43a047;
+}
+
+.totp-prompt {
+    color: #aaa;
+    font-size: 0.9em;
+    margin: 0;
 }
 
 .error {
