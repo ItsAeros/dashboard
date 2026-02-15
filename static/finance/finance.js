@@ -27,6 +27,10 @@
     function showLogin() {
         document.getElementById('login-gate').classList.remove('hidden');
         document.getElementById('finance-app').classList.add('hidden');
+        // Reset to step 1
+        document.getElementById('login-form').classList.remove('hidden');
+        document.getElementById('totp-form').classList.add('hidden');
+        pendingPartialToken = null;
     }
 
     function showApp() {
@@ -34,8 +38,13 @@
         document.getElementById('finance-app').classList.remove('hidden');
     }
 
+    // Holds the partial token between step 1 and step 2
+    var pendingPartialToken = null;
+
+    // Step 1: username + password
     document.getElementById('login-form').addEventListener('submit', function (e) {
         e.preventDefault();
+        var username = document.getElementById('login-username').value;
         var password = document.getElementById('login-password').value;
         var errorEl = document.getElementById('login-error');
         errorEl.classList.add('hidden');
@@ -43,7 +52,7 @@
         fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: password }),
+            body: JSON.stringify({ username: username, password: password }),
         })
             .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
             .then(function (result) {
@@ -52,6 +61,42 @@
                     errorEl.classList.remove('hidden');
                     return;
                 }
+                if (result.data.requires_totp) {
+                    // Server says TOTP is needed — show step 2
+                    pendingPartialToken = result.data.partial_token;
+                    document.getElementById('login-form').classList.add('hidden');
+                    document.getElementById('totp-form').classList.remove('hidden');
+                    document.getElementById('login-totp').focus();
+                } else {
+                    // No TOTP — we got a full token
+                    authToken = result.data.token;
+                    sessionStorage.setItem('auth_token', authToken);
+                    showApp();
+                    loadDashboard();
+                }
+            });
+    });
+
+    // Step 2: TOTP code
+    document.getElementById('totp-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var totpCode = document.getElementById('login-totp').value;
+        var errorEl = document.getElementById('login-error');
+        errorEl.classList.add('hidden');
+
+        fetch('/api/auth/verify-totp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ partial_token: pendingPartialToken, totp_code: totpCode }),
+        })
+            .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+            .then(function (result) {
+                if (!result.ok) {
+                    errorEl.textContent = result.data.detail || 'Invalid code';
+                    errorEl.classList.remove('hidden');
+                    return;
+                }
+                pendingPartialToken = null;
                 authToken = result.data.token;
                 sessionStorage.setItem('auth_token', authToken);
                 showApp();
