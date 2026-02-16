@@ -255,41 +255,469 @@ body {
     box-shadow: 0 0 6px rgba(244, 67, 54, 0.5);
 }
 
-/* --- Links Section --- */
-.links-section {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #2a2a2a;
-}
-
-.links-category {
+/* --- Sidebar (fixed left, fills blank space) --- */
+#sidebar {
+    position: fixed;
+    left: 20px;
+    top: 140px;
+    /* Fill from left edge to where the centered container starts */
+    width: calc((100vw - 1200px) / 2 - 40px);
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 12px;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 50;
 }
 
-.links-label {
+/* Thin dark scrollbar for sidebar */
+#sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 3px;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+#sidebar:empty {
+    display: none;
+}
+
+.sidebar-card {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.sidebar-heading {
     font-size: 0.8em;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: #888;
-    min-width: 100px;
+    margin: 0 0 10px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #2a2a2a;
 }
 
-.link-item {
+.sidebar-links {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sidebar-link {
     color: #8ab4f8;
     text-decoration: none;
-    font-size: 0.95em;
-    padding: 4px 12px;
+    font-size: 0.9em;
+    padding: 6px 10px;
     border-radius: 6px;
-    background: #1e1e1e;
     transition: background 0.2s;
 }
 
-.link-item:hover {
+.sidebar-link:hover {
     background: #2a2a2a;
+}
+
+/* --- Bookmark Edit Mode --- */
+
+/* Edit toggle button in sidebar header */
+.sidebar-edit-toggle {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    transition: background 0.2s, color 0.2s;
+    margin-bottom: 8px;
+    align-self: flex-end;
+}
+
+.sidebar-edit-toggle:hover {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.sidebar-edit-toggle.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+/* Group header row in edit mode */
+.sidebar-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin: 0 0 10px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.sidebar-heading-row h3 {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #888;
+    margin: 0;
+    flex: 1;
+}
+
+/* Small icon buttons for edit/delete on groups and links */
+.bm-icon-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1;
+}
+
+.bm-icon-btn:hover {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.bm-icon-btn.danger:hover {
+    background: #3a1a1a;
+    color: #f44336;
+}
+
+/* Sidebar link row in edit mode */
+.sidebar-link-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sidebar-link-row .sidebar-link {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-link-row .bm-link-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+/* Add bookmark / Add group buttons */
+.bm-add-btn {
+    background: none;
+    border: 1px dashed #444;
+    color: #666;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.8em;
+    width: 100%;
+    text-align: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    margin-top: 6px;
+}
+
+.bm-add-btn:hover {
+    background: #1a2a1a;
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+.bm-add-group-btn {
+    background: none;
+    border: 1px dashed #444;
+    color: #666;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    width: 100%;
+    text-align: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.bm-add-group-btn:hover {
+    background: #1a2a1a;
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+/* Inline form for adding/editing a bookmark */
+.bm-inline-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    background: #1a1a2e;
+    border-radius: 8px;
+    margin-top: 6px;
+}
+
+.bm-inline-form input {
+    background: #121212;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #e0e0e0;
+    padding: 6px 10px;
+    font-size: 0.85em;
+    outline: none;
+}
+
+.bm-inline-form input:focus {
+    border-color: #555;
+}
+
+.bm-inline-form .bm-form-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+/* Buttons used in forms */
+.bm-btn {
+    border: none;
+    cursor: pointer;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    transition: background 0.15s;
+}
+
+.bm-btn-primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+.bm-btn-primary:hover {
+    background: #1d4ed8;
+}
+
+.bm-btn-secondary {
+    background: #333;
+    color: #e0e0e0;
+}
+
+.bm-btn-secondary:hover {
+    background: #444;
+}
+
+.bm-btn-danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+.bm-btn-danger:hover {
+    background: #b91c1c;
+}
+
+/* --- Service Card Edit Mode --- */
+
+/* Category heading row with rename/delete buttons */
+.svc-heading-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.svc-heading-row h2 {
+    margin: 0;
+    padding: 0;
+    border: none;
+    flex: 1;
+}
+
+/* Editable card wrapper (non-link, shows overlay on hover) */
+.card-editable {
+    cursor: grab;
+    position: relative;
+}
+
+.card-editable:active {
+    cursor: grabbing;
+}
+
+.card-editable:hover {
+    transform: none;
+}
+
+/* Drag-and-drop: card being dragged */
+.card.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+}
+
+/* Drag-and-drop: group/category being dragged */
+.dragging-group {
+    opacity: 0.4;
+    border: 2px dashed #555;
+    border-radius: 12px;
+}
+
+.card-edit-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.card-editable:hover .card-edit-overlay {
+    opacity: 1;
+}
+
+/* Service inline form (wider than bookmark form) */
+.svc-inline-form {
+    max-width: 500px;
+    margin-bottom: 12px;
+}
+
+.svc-icon-input {
+    max-width: 120px;
+}
+
+.svc-shortcut-input {
+    max-width: 100px;
+}
+
+/* "+ Add Service" button inside grid */
+.svc-add-btn {
+    background: none;
+    border: 2px dashed #444;
+    color: #666;
+    cursor: pointer;
+    padding: 20px;
+    border-radius: 12px;
+    font-size: 0.95em;
+    text-align: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.svc-add-btn:hover {
+    background: #1a2a1a;
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+/* "+ Add Category" button below all categories */
+.svc-add-cat-btn {
+    background: none;
+    border: 2px dashed #444;
+    color: #666;
+    cursor: pointer;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 0.95em;
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.svc-add-cat-btn:hover {
+    background: #1a2a1a;
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+/* --- Login Modal --- */
+.bm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.bm-modal {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.bm-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.bm-modal-header h3 {
+    margin: 0;
+    font-size: 1.1em;
+    color: #e0e0e0;
+}
+
+.bm-modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.4em;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.bm-modal-close:hover {
+    color: #e0e0e0;
+}
+
+#bm-login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#bm-login-form input {
+    background: #121212;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #e0e0e0;
+    padding: 10px 14px;
+    font-size: 1em;
+    outline: none;
+}
+
+#bm-login-form input:focus {
+    border-color: #555;
+}
+
+.bm-error {
+    color: #f44336;
+    font-size: 0.85em;
+    margin: 0;
 }
 
 /* --- Visibility --- */
@@ -298,6 +726,24 @@ body {
 }
 
 /* --- Responsive --- */
+/* Hide fixed sidebar when viewport is too narrow for it */
+@media (max-width: 1500px) {
+    #sidebar {
+        position: static;
+        width: 100%;
+        max-height: none;
+        overflow-y: visible;
+        flex-direction: row;
+        flex-wrap: wrap;
+        margin-top: 30px;
+    }
+
+    .sidebar-card {
+        flex: 1;
+        min-width: 150px;
+    }
+}
+
 @media (max-width: 768px) {
     #top-panel {
         flex-direction: column;
@@ -332,8 +778,4 @@ body {
         font-size: 1.4em;
     }
 
-    .links-label {
-        min-width: auto;
-        width: 100%;
-    }
 }
