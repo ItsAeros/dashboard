@@ -1,0 +1,781 @@
+/* --- Base --- */
+* { box-sizing: border-box; }
+
+body {
+    background: #121212;
+    color: #e0e0e0;
+    font-family: system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    max-width: 1200px;
+    width: 100%;
+}
+
+/* --- Top Panel (sticky) --- */
+#top-panel {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #121212;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 12px 0;
+    border-bottom: 1px solid #2a2a2a;
+    margin-bottom: 20px;
+}
+
+/* --- Logo --- */
+.header-logo {
+    width: 96px;
+    height: 96px;
+    max-width: 96px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+/* --- Header / Clock --- */
+#header {
+    text-align: left;
+    flex-shrink: 0;
+}
+
+.clock .greeting {
+    font-size: 1.1em;
+    margin: 0;
+}
+
+.clock .time {
+    font-size: 1.6em;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+}
+
+.clock .date {
+    font-size: 0.85em;
+    color: #888;
+    margin-top: 2px;
+}
+
+/* --- Brave Search --- */
+#brave-search-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+
+#brave-search {
+    width: 100%;
+}
+
+#brave-search input {
+    background: #1a1a2e;
+    border: 2px solid #fb542b;
+    border-radius: 24px;
+    color: #e0e0e0;
+    padding: 10px 20px;
+    font-size: 1em;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#brave-search input:focus {
+    border-color: #ff7654;
+    box-shadow: 0 0 12px rgba(251, 84, 43, 0.3);
+}
+
+#brave-search input::placeholder {
+    color: #777;
+}
+
+/* --- Service Filter --- */
+#search-wrapper {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+#search {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #e0e0e0;
+    padding: 10px 16px;
+    font-size: 1em;
+    width: 100%;
+    max-width: 400px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#search:focus {
+    border-color: #555;
+}
+
+#search::placeholder {
+    color: #666;
+}
+
+/* --- Stats Widget --- */
+#stats-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+    text-align: right;
+}
+
+#stats-widget:empty {
+    display: none;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    background: none;
+}
+
+.stat-label {
+    font-size: 0.7em;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-width: 40px;
+    text-align: right;
+}
+
+.stat-value {
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
+.stat-bar {
+    height: 3px;
+    background: #333;
+    border-radius: 2px;
+    width: 60px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.stat-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: #4caf50;
+    transition: width 0.5s;
+}
+
+/* --- Categories --- */
+.category h2 {
+    font-size: 1em;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #888;
+    border-bottom: 1px solid #2a2a2a;
+    padding-bottom: 8px;
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+/* --- Grid --- */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* --- Cards --- */
+.card {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+    display: block;
+    color: #e0e0e0;
+    text-decoration: none;
+    position: relative;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card:focus {
+    outline: 2px solid #4caf50;
+    outline-offset: 2px;
+}
+
+.card .icon {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.card .title {
+    font-size: 1.2em;
+}
+
+.card .shortcut-hint {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    font-size: 0.7em;
+    color: #555;
+}
+
+/* --- Status Dot --- */
+.status-dot {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #555;
+}
+
+.status-dot.status-up {
+    background: #4caf50;
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+}
+
+.status-dot.status-down {
+    background: #f44336;
+    box-shadow: 0 0 6px rgba(244, 67, 54, 0.5);
+}
+
+/* --- Sidebar (fixed left, fills blank space) --- */
+#sidebar {
+    position: fixed;
+    left: 20px;
+    top: 140px;
+    /* Fill from left edge to where the centered container starts */
+    width: calc((100vw - 1200px) / 2 - 40px);
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 50;
+}
+
+/* Thin dark scrollbar for sidebar */
+#sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 3px;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+#sidebar:empty {
+    display: none;
+}
+
+.sidebar-card {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.sidebar-heading {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #888;
+    margin: 0 0 10px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.sidebar-links {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sidebar-link {
+    color: #8ab4f8;
+    text-decoration: none;
+    font-size: 0.9em;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.sidebar-link:hover {
+    background: #2a2a2a;
+}
+
+/* --- Bookmark Edit Mode --- */
+
+/* Edit toggle button in sidebar header */
+.sidebar-edit-toggle {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    transition: background 0.2s, color 0.2s;
+    margin-bottom: 8px;
+    align-self: flex-end;
+}
+
+.sidebar-edit-toggle:hover {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.sidebar-edit-toggle.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+/* Group header row in edit mode */
+.sidebar-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin: 0 0 10px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.sidebar-heading-row h3 {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #888;
+    margin: 0;
+    flex: 1;
+}
+
+/* Small icon buttons for edit/delete on groups and links */
+.bm-icon-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1;
+}
+
+.bm-icon-btn:hover {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.bm-icon-btn.danger:hover {
+    background: #3a1a1a;
+    color: #f44336;
+}
+
+/* Sidebar link row in edit mode */
+.sidebar-link-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sidebar-link-row .sidebar-link {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-link-row .bm-link-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+/* Add bookmark / Add group buttons */
+.bm-add-btn {
+    background: none;
+    border: 1px dashed #444;
+    color: #666;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.8em;
+    width: 100%;
+    text-align: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    margin-top: 6px;
+}
+
+.bm-add-btn:hover {
+    background: #1a2a1a;
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+.bm-add-group-btn {
+    background: none;
+    border: 1px dashed #444;
+    color: #666;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    width: 100%;
+    text-align: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.bm-add-group-btn:hover {
+    background: #1a2a1a;
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+/* Inline form for adding/editing a bookmark */
+.bm-inline-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    background: #1a1a2e;
+    border-radius: 8px;
+    margin-top: 6px;
+}
+
+.bm-inline-form input {
+    background: #121212;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #e0e0e0;
+    padding: 6px 10px;
+    font-size: 0.85em;
+    outline: none;
+}
+
+.bm-inline-form input:focus {
+    border-color: #555;
+}
+
+.bm-inline-form .bm-form-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+/* Buttons used in forms */
+.bm-btn {
+    border: none;
+    cursor: pointer;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    transition: background 0.15s;
+}
+
+.bm-btn-primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+.bm-btn-primary:hover {
+    background: #1d4ed8;
+}
+
+.bm-btn-secondary {
+    background: #333;
+    color: #e0e0e0;
+}
+
+.bm-btn-secondary:hover {
+    background: #444;
+}
+
+.bm-btn-danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+.bm-btn-danger:hover {
+    background: #b91c1c;
+}
+
+/* --- Service Card Edit Mode --- */
+
+/* Category heading row with rename/delete buttons */
+.svc-heading-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.svc-heading-row h2 {
+    margin: 0;
+    padding: 0;
+    border: none;
+    flex: 1;
+}
+
+/* Editable card wrapper (non-link, shows overlay on hover) */
+.card-editable {
+    cursor: grab;
+    position: relative;
+}
+
+.card-editable:active {
+    cursor: grabbing;
+}
+
+.card-editable:hover {
+    transform: none;
+}
+
+/* Drag-and-drop: card being dragged */
+.card.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+}
+
+/* Drag-and-drop: group/category being dragged */
+.dragging-group {
+    opacity: 0.4;
+    border: 2px dashed #555;
+    border-radius: 12px;
+}
+
+.card-edit-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.card-editable:hover .card-edit-overlay {
+    opacity: 1;
+}
+
+/* Service inline form (wider than bookmark form) */
+.svc-inline-form {
+    max-width: 500px;
+    margin-bottom: 12px;
+}
+
+.svc-icon-input {
+    max-width: 120px;
+}
+
+.svc-shortcut-input {
+    max-width: 100px;
+}
+
+/* "+ Add Service" button inside grid */
+.svc-add-btn {
+    background: none;
+    border: 2px dashed #444;
+    color: #666;
+    cursor: pointer;
+    padding: 20px;
+    border-radius: 12px;
+    font-size: 0.95em;
+    text-align: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.svc-add-btn:hover {
+    background: #1a2a1a;
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+/* "+ Add Category" button below all categories */
+.svc-add-cat-btn {
+    background: none;
+    border: 2px dashed #444;
+    color: #666;
+    cursor: pointer;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 0.95em;
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.svc-add-cat-btn:hover {
+    background: #1a2a1a;
+    color: #4caf50;
+    border-color: #4caf50;
+}
+
+/* --- Login Modal --- */
+.bm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.bm-modal {
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.bm-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.bm-modal-header h3 {
+    margin: 0;
+    font-size: 1.1em;
+    color: #e0e0e0;
+}
+
+.bm-modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.4em;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.bm-modal-close:hover {
+    color: #e0e0e0;
+}
+
+#bm-login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#bm-login-form input {
+    background: #121212;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #e0e0e0;
+    padding: 10px 14px;
+    font-size: 1em;
+    outline: none;
+}
+
+#bm-login-form input:focus {
+    border-color: #555;
+}
+
+.bm-error {
+    color: #f44336;
+    font-size: 0.85em;
+    margin: 0;
+}
+
+/* --- Visibility --- */
+.hidden {
+    display: none !important;
+}
+
+/* --- Responsive --- */
+/* Hide fixed sidebar when viewport is too narrow for it */
+@media (max-width: 1500px) {
+    #sidebar {
+        position: static;
+        width: 100%;
+        max-height: none;
+        overflow-y: visible;
+        flex-direction: row;
+        flex-wrap: wrap;
+        margin-top: 30px;
+    }
+
+    .sidebar-card {
+        flex: 1;
+        min-width: 150px;
+    }
+}
+
+@media (max-width: 768px) {
+    #top-panel {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    #header {
+        text-align: center;
+    }
+
+    #brave-search-wrapper {
+        justify-content: center;
+    }
+
+    #stats-widget {
+        align-items: center;
+        text-align: center;
+    }
+
+    .stat-label {
+        text-align: left;
+    }
+}
+
+@media (max-width: 600px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .clock .time {
+        font-size: 1.4em;
+    }
+
+}
