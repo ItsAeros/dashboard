@@ -27,8 +27,28 @@
                 <p style="text-align:center;color:#888;">JavaScript is required to load the service dashboard.</p>
             </noscript>
         </main>
-        <div id="links"></div>
+        <aside id="sidebar"></aside>
     </div>
+
+    <!-- Login modal for bookmark editing -->
+    <div id="bm-login-modal" class="bm-modal-overlay hidden">
+        <div class="bm-modal">
+            <div class="bm-modal-header">
+                <h3>Login to Edit</h3>
+                <button id="bm-login-close" class="bm-modal-close">&times;</button>
+            </div>
+            <form id="bm-login-form">
+                <input type="text" id="bm-login-user" placeholder="Username" autocomplete="username" required>
+                <input type="password" id="bm-login-pass" placeholder="Password" autocomplete="current-password" required>
+                <div id="bm-totp-row" class="hidden">
+                    <input type="text" id="bm-login-totp" placeholder="2FA Code" autocomplete="one-time-code" inputmode="numeric">
+                </div>
+                <p id="bm-login-error" class="bm-error hidden"></p>
+                <button type="submit" class="bm-btn bm-btn-primary">Login</button>
+            </form>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
