@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pmserver</title>
+    <link rel="icon" href="/img/logo.png" type="image/png">
+    <meta name="description" content="pmserver.us - Self-hosted service dashboard">
+    <meta property="og:title" content="pmserver.us">
+    <meta property="og:description" content="Self-hosted service dashboard">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pmserver.us">
+    <meta name="theme-color" content="#121212">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div id="top-panel">
+            <img src="/img/logo.png" alt="pmserver" class="header-logo" width="96" height="96">
+            <header id="header"></header>
+            <div id="brave-search-wrapper"></div>
+            <div id="stats-widget"></div>
+        </div>
+        <div id="search-wrapper"></div>
+        <main id="services">
+            <noscript>
+                <p style="text-align:center;color:#888;">JavaScript is required to load the service dashboard.</p>
+            </noscript>
+        </main>
+        <aside id="sidebar"></aside>
+    </div>
+
+    <!-- Login modal for bookmark editing -->
+    <div id="bm-login-modal" class="bm-modal-overlay hidden">
+        <div class="bm-modal">
+            <div class="bm-modal-header">
+                <h3>Login to Edit</h3>
+                <button id="bm-login-close" class="bm-modal-close">&times;</button>
+            </div>
+            <form id="bm-login-form">
+                <input type="text" id="bm-login-user" placeholder="Username" autocomplete="username" required>
+                <input type="password" id="bm-login-pass" placeholder="Password" autocomplete="current-password" required>
+                <div id="bm-totp-row" class="hidden">
+                    <input type="text" id="bm-login-totp" placeholder="2FA Code" autocomplete="one-time-code" inputmode="numeric">
+                </div>
+                <p id="bm-login-error" class="bm-error hidden"></p>
+                <button type="submit" class="bm-btn bm-btn-primary">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
