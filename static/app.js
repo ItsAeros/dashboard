@@ -1,10 +1,15 @@
 (function () {
-    const CONFIG_URL = 'services.json';
+    const SERVICES_URL = '/api/services';
+    const STATUS_URL = '/api/services/status';
     const STATS_URL = '/api/stats';
+    const BOOKMARKS_URL = '/api/bookmarks';
     const STATUS_CHECK_INTERVAL = 60000;
     const CLOCK_INTERVAL = 1000;
 
     let allServices = [];
+    let serviceData = []; // current service categories from API
+    let editMode = false;
+    let bookmarkData = []; // current bookmark groups from API
 
     // --- Init ---
 
@@ -12,32 +17,37 @@
         renderClock();
         setInterval(updateClock, CLOCK_INTERVAL);
 
-        try {
-            const config = await loadConfig();
-            allServices = config.categories.flatMap(c =>
-                c.services.map(s => ({ ...s, category: c.name }))
-            );
-            renderBraveSearch();
-            renderSearchBar();
-            renderServices(config.categories);
-            renderLinks(config.links || []);
-            checkAllStatuses();
-            setInterval(checkAllStatuses, STATUS_CHECK_INTERVAL);
-        } catch (e) {
-            document.getElementById('services').innerHTML =
-                '<p style="text-align:center;color:#888;">Failed to load services.</p>';
-        }
+        renderBraveSearch();
+        renderSearchBar();
+
+        await loadAndRenderServices();
+        checkAllStatuses();
+        setInterval(checkAllStatuses, STATUS_CHECK_INTERVAL);
+
+        await loadAndRenderBookmarks();
 
         loadStats();
         setInterval(loadStats, STATUS_CHECK_INTERVAL);
         setupKeyboardNav();
+        setupLoginModal();
     }
 
-    // --- Config ---
+    // --- Services from API ---
 
-    async function loadConfig() {
-        const res = await fetch(CONFIG_URL);
-        return res.json();
+    async function loadAndRenderServices() {
+        try {
+            var res = await fetch(SERVICES_URL);
+            serviceData = await res.json();
+        } catch (e) {
+            serviceData = [];
+        }
+        // Build flat list for keyboard nav
+        allServices = serviceData.flatMap(function (cat) {
+            return cat.services.map(function (s) {
+                return Object.assign({}, s, { category: cat.name });
+            });
+        });
+        renderServices(serviceData);
     }
 
     // --- Clock / Greeting ---
@@ -133,20 +143,95 @@
             section.className = 'category';
             section.setAttribute('data-category', cat.name);
 
-            var heading = document.createElement('h2');
-            heading.textContent = cat.name;
-            section.appendChild(heading);
+            if (editMode) {
+                // Make category section draggable for group reordering
+                section.draggable = true;
+                section.addEventListener('dragstart', function (e) {
+                    // Only drag by the heading row, not child cards
+                    if (e.target !== section) return;
+                    e.dataTransfer.setData('text/plain', 'category:' + cat.name);
+                    e.dataTransfer.effectAllowed = 'move';
+                    section.classList.add('dragging-group');
+                });
+                section.addEventListener('dragend', function () {
+                    section.classList.remove('dragging-group');
+                });
+
+                // Editable category header with rename/delete
+                var headRow = document.createElement('div');
+                headRow.className = 'svc-heading-row';
+
+                var heading = document.createElement('h2');
+                heading.textContent = cat.name;
+                headRow.appendChild(heading);
+
+                var renameBtn = document.createElement('button');
+                renameBtn.className = 'bm-icon-btn';
+                renameBtn.title = 'Rename category';
+                renameBtn.textContent = 'Rename';
+                renameBtn.addEventListener('click', function () {
+                    startRenameSvcCategory(section, cat.name);
+                });
+                headRow.appendChild(renameBtn);
+
+                var delCatBtn = document.createElement('button');
+                delCatBtn.className = 'bm-icon-btn danger';
+                delCatBtn.title = 'Delete category';
+                delCatBtn.textContent = 'Del';
+                delCatBtn.addEventListener('click', function () {
+                    if (confirm('Delete category "' + cat.name + '" and all its services?')) {
+                        deleteSvcCategory(cat.name);
+                    }
+                });
+                headRow.appendChild(delCatBtn);
+
+                section.appendChild(headRow);
+            } else {
+                var heading = document.createElement('h2');
+                heading.textContent = cat.name;
+                section.appendChild(heading);
+            }
 
             var grid = document.createElement('div');
             grid.className = 'grid';
 
             cat.services.forEach(function (service) {
-                grid.appendChild(renderCard(service));
+                if (editMode) {
+                    grid.appendChild(renderEditableCard(service, cat.name));
+                } else {
+                    grid.appendChild(renderCard(service));
+                }
             });
+
+            // Drag-and-drop reorder + "+ Add Service" button in edit mode
+            if (editMode) {
+                setupGridDragDrop(grid);
+
+                var addBtn = document.createElement('button');
+                addBtn.className = 'svc-add-btn';
+                addBtn.textContent = '+ Add Service';
+                addBtn.addEventListener('click', function () {
+                    startAddService(section, cat.name);
+                });
+                grid.appendChild(addBtn);
+            }
 
             section.appendChild(grid);
             container.appendChild(section);
         });
+
+        // Category group reorder + "+ Add Category" button in edit mode
+        if (editMode) {
+            setupCategoryDragDrop(container);
+
+            var addCatBtn = document.createElement('button');
+            addCatBtn.className = 'svc-add-cat-btn';
+            addCatBtn.textContent = '+ Add Category';
+            addCatBtn.addEventListener('click', function () {
+                startAddSvcCategory(container);
+            });
+            container.appendChild(addCatBtn);
+        }
     }
 
     function renderCard(service) {
@@ -158,6 +243,7 @@
             a.target = '_blank';
             a.rel = 'noopener noreferrer';
         }
+        a.setAttribute('data-id', service.id);
         a.setAttribute('data-name', service.name.toLowerCase());
         if (service.shortcut) {
             a.setAttribute('data-shortcut', service.shortcut);
@@ -187,65 +273,1054 @@
         return a;
     }
 
-    // --- Render Links ---
+    function renderEditableCard(service, categoryName) {
+        var wrapper = document.createElement('div');
+        wrapper.className = 'card card-editable';
+        wrapper.setAttribute('data-id', service.id);
+        wrapper.setAttribute('data-name', service.name.toLowerCase());
+        wrapper.draggable = true;
+        if (service.shortcut) {
+            wrapper.setAttribute('data-shortcut', service.shortcut);
+        }
 
-    function renderLinks(linkGroups) {
-        var container = document.getElementById('links');
-        if (!linkGroups.length) return;
+        // Drag events
+        wrapper.addEventListener('dragstart', function (e) {
+            e.dataTransfer.setData('text/plain', String(service.id));
+            e.dataTransfer.effectAllowed = 'move';
+            wrapper.classList.add('dragging');
+        });
+        wrapper.addEventListener('dragend', function () {
+            wrapper.classList.remove('dragging');
+            // Remove any leftover placeholders
+            document.querySelectorAll('.drag-placeholder').forEach(function (p) { p.remove(); });
+        });
 
-        container.innerHTML = '';
-        var section = document.createElement('div');
-        section.className = 'links-section';
+        var icon = document.createElement('div');
+        icon.className = 'icon';
+        icon.textContent = service.icon;
+        wrapper.appendChild(icon);
+
+        var title = document.createElement('div');
+        title.className = 'title';
+        title.textContent = service.name;
+        wrapper.appendChild(title);
+
+        if (service.shortcut) {
+            var hint = document.createElement('span');
+            hint.className = 'shortcut-hint';
+            hint.textContent = service.shortcut;
+            wrapper.appendChild(hint);
+        }
+
+        // Edit/delete overlay
+        var overlay = document.createElement('div');
+        overlay.className = 'card-edit-overlay';
+
+        var editBtn = document.createElement('button');
+        editBtn.className = 'bm-btn bm-btn-primary';
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', function () {
+            startEditService(wrapper.closest('.category'), service);
+        });
+        overlay.appendChild(editBtn);
+
+        var delBtn = document.createElement('button');
+        delBtn.className = 'bm-btn bm-btn-danger';
+        delBtn.textContent = 'Delete';
+        delBtn.addEventListener('click', function () {
+            if (confirm('Delete "' + service.name + '"?')) {
+                deleteSvcItem(service.id);
+            }
+        });
+        overlay.appendChild(delBtn);
+
+        wrapper.appendChild(overlay);
+        return wrapper;
+    }
+
+    // --- Service CRUD helpers ---
+
+    function startAddService(sectionEl, categoryName) {
+        removeInlineForms();
+
+        var form = document.createElement('div');
+        form.className = 'bm-inline-form svc-inline-form';
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Name';
+
+        var urlInput = document.createElement('input');
+        urlInput.type = 'text';
+        urlInput.placeholder = 'URL';
+
+        var iconInput = document.createElement('input');
+        iconInput.type = 'text';
+        iconInput.placeholder = 'Icon (emoji)';
+        iconInput.className = 'svc-icon-input';
+
+        var shortcutInput = document.createElement('input');
+        shortcutInput.type = 'number';
+        shortcutInput.placeholder = 'Shortcut #';
+        shortcutInput.min = '1';
+        shortcutInput.max = '9';
+        shortcutInput.className = 'svc-shortcut-input';
+
+        var actions = document.createElement('div');
+        actions.className = 'bm-form-actions';
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'bm-btn bm-btn-primary';
+        saveBtn.textContent = 'Save';
+        saveBtn.addEventListener('click', function () {
+            if (nameInput.value && urlInput.value) {
+                createSvcItem(categoryName, nameInput.value, urlInput.value, iconInput.value, shortcutInput.value);
+            }
+        });
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'bm-btn bm-btn-secondary';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            form.remove();
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        form.appendChild(nameInput);
+        form.appendChild(urlInput);
+        form.appendChild(iconInput);
+        form.appendChild(shortcutInput);
+        form.appendChild(actions);
+        sectionEl.appendChild(form);
+        nameInput.focus();
+    }
+
+    function startEditService(sectionEl, service) {
+        removeInlineForms();
+
+        var form = document.createElement('div');
+        form.className = 'bm-inline-form svc-inline-form';
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Name';
+        nameInput.value = service.name;
+
+        var urlInput = document.createElement('input');
+        urlInput.type = 'text';
+        urlInput.placeholder = 'URL';
+        urlInput.value = service.url;
+
+        var iconInput = document.createElement('input');
+        iconInput.type = 'text';
+        iconInput.placeholder = 'Icon (emoji)';
+        iconInput.value = service.icon || '';
+        iconInput.className = 'svc-icon-input';
+
+        var shortcutInput = document.createElement('input');
+        shortcutInput.type = 'number';
+        shortcutInput.placeholder = 'Shortcut #';
+        shortcutInput.min = '1';
+        shortcutInput.max = '9';
+        shortcutInput.value = service.shortcut || '';
+        shortcutInput.className = 'svc-shortcut-input';
+
+        var actions = document.createElement('div');
+        actions.className = 'bm-form-actions';
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'bm-btn bm-btn-primary';
+        saveBtn.textContent = 'Save';
+        saveBtn.addEventListener('click', function () {
+            if (nameInput.value && urlInput.value) {
+                updateSvcItem(service.id, nameInput.value, urlInput.value, iconInput.value, shortcutInput.value);
+            }
+        });
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'bm-btn bm-btn-secondary';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            form.remove();
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        form.appendChild(nameInput);
+        form.appendChild(urlInput);
+        form.appendChild(iconInput);
+        form.appendChild(shortcutInput);
+        form.appendChild(actions);
+        sectionEl.appendChild(form);
+        nameInput.focus();
+        nameInput.select();
+    }
+
+    function startRenameSvcCategory(sectionEl, oldName) {
+        removeInlineForms();
+
+        var form = document.createElement('div');
+        form.className = 'bm-inline-form svc-inline-form';
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Category name';
+        nameInput.value = oldName;
+
+        var actions = document.createElement('div');
+        actions.className = 'bm-form-actions';
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'bm-btn bm-btn-primary';
+        saveBtn.textContent = 'Save';
+        saveBtn.addEventListener('click', function () {
+            if (nameInput.value && nameInput.value !== oldName) {
+                renameSvcCategory(oldName, nameInput.value);
+            } else {
+                form.remove();
+            }
+        });
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'bm-btn bm-btn-secondary';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            form.remove();
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        form.appendChild(nameInput);
+        form.appendChild(actions);
+        // Insert after the heading row
+        var grid = sectionEl.querySelector('.grid');
+        sectionEl.insertBefore(form, grid);
+        nameInput.focus();
+        nameInput.select();
+    }
+
+    function startAddSvcCategory(containerEl) {
+        removeInlineForms();
+
+        var form = document.createElement('div');
+        form.className = 'bm-inline-form svc-inline-form';
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'New category name';
+
+        var actions = document.createElement('div');
+        actions.className = 'bm-form-actions';
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'bm-btn bm-btn-primary';
+        saveBtn.textContent = 'Create';
+        saveBtn.addEventListener('click', function () {
+            if (nameInput.value) {
+                createSvcCategory(nameInput.value);
+            }
+        });
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'bm-btn bm-btn-secondary';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            form.remove();
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        form.appendChild(nameInput);
+        form.appendChild(actions);
+        // Insert before the "Add Category" button
+        var addCatBtn = containerEl.querySelector('.svc-add-cat-btn');
+        containerEl.insertBefore(form, addCatBtn);
+        nameInput.focus();
+    }
+
+    // --- Service API calls ---
+
+    async function createSvcItem(category, name, url, icon, shortcut) {
+        var body = { category: category, name: name, url: url, icon: icon || '' };
+        if (shortcut) body.shortcut = parseInt(shortcut, 10);
+        var res = await bmFetch(SERVICES_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (res.ok) await loadAndRenderServices();
+    }
+
+    async function updateSvcItem(id, name, url, icon, shortcut) {
+        var body = { name: name, url: url, icon: icon || '' };
+        if (shortcut) body.shortcut = parseInt(shortcut, 10);
+        var res = await bmFetch(SERVICES_URL + '/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (res.ok) await loadAndRenderServices();
+    }
+
+    async function deleteSvcItem(id) {
+        var res = await bmFetch(SERVICES_URL + '/' + id, { method: 'DELETE' });
+        if (res.ok) await loadAndRenderServices();
+    }
+
+    async function createSvcCategory(name) {
+        var res = await bmFetch(SERVICES_URL + '/categories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name }),
+        });
+        if (res.ok) {
+            // Add empty category locally so it renders immediately
+            serviceData.push({ name: name, services: [] });
+            renderServices(serviceData);
+        }
+    }
+
+    async function renameSvcCategory(oldName, newName) {
+        var res = await bmFetch(SERVICES_URL + '/categories/' + encodeURIComponent(oldName), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_name: newName }),
+        });
+        if (res.ok) await loadAndRenderServices();
+    }
+
+    async function deleteSvcCategory(name) {
+        var res = await bmFetch(SERVICES_URL + '/categories/' + encodeURIComponent(name), {
+            method: 'DELETE',
+        });
+        if (res.ok) await loadAndRenderServices();
+    }
+
+    // --- Bookmarks (sidebar from API) ---
+
+    function getAuthToken() {
+        return sessionStorage.getItem('authToken');
+    }
+
+    function setAuthToken(token) {
+        sessionStorage.setItem('authToken', token);
+    }
+
+    function clearAuthToken() {
+        sessionStorage.removeItem('authToken');
+    }
+
+    async function bmFetch(url, options) {
+        options = options || {};
+        var token = getAuthToken();
+        if (token) {
+            options.headers = options.headers || {};
+            options.headers['Authorization'] = 'Bearer ' + token;
+        }
+        var res = await fetch(url, options);
+        if (res.status === 401) {
+            clearAuthToken();
+            editMode = false;
+        }
+        return res;
+    }
+
+    async function loadAndRenderBookmarks() {
+        try {
+            var res = await fetch(BOOKMARKS_URL);
+            bookmarkData = await res.json();
+        } catch (e) {
+            bookmarkData = [];
+        }
+        renderSidebar(bookmarkData);
+    }
+
+    // Re-render both services and bookmarks (used when toggling edit mode)
+    function refreshEditMode() {
+        renderServices(serviceData);
+        renderSidebar(bookmarkData);
+    }
+
+    function renderSidebar(linkGroups) {
+        var sidebar = document.getElementById('sidebar');
+        sidebar.innerHTML = '';
+
+        // Edit toggle button
+        var toggleBtn = document.createElement('button');
+        toggleBtn.className = 'sidebar-edit-toggle' + (editMode ? ' active' : '');
+        toggleBtn.textContent = editMode ? 'Done' : 'Edit';
+        toggleBtn.addEventListener('click', function () {
+            if (!editMode) {
+                if (getAuthToken()) {
+                    editMode = true;
+                    refreshEditMode();
+                } else {
+                    showLoginModal();
+                }
+            } else {
+                editMode = false;
+                refreshEditMode();
+            }
+        });
+        sidebar.appendChild(toggleBtn);
 
         linkGroups.forEach(function (group) {
-            var category = document.createElement('div');
-            category.className = 'links-category';
+            var card = document.createElement('div');
+            card.className = 'sidebar-card';
+            card.setAttribute('data-group', group.name);
 
-            var label = document.createElement('span');
-            label.className = 'links-label';
-            label.textContent = group.name;
-            category.appendChild(label);
+            if (editMode) {
+                // Make sidebar card draggable for group reordering
+                card.draggable = true;
+                card.addEventListener('dragstart', function (e) {
+                    if (e.target !== card) return;
+                    e.dataTransfer.setData('text/plain', 'bmgroup:' + group.name);
+                    e.dataTransfer.effectAllowed = 'move';
+                    card.classList.add('dragging-group');
+                });
+                card.addEventListener('dragend', function () {
+                    card.classList.remove('dragging-group');
+                });
+
+                // Editable group header with rename/delete
+                var headRow = document.createElement('div');
+                headRow.className = 'sidebar-heading-row';
+
+                var heading = document.createElement('h3');
+                heading.textContent = group.name;
+                headRow.appendChild(heading);
+
+                var renameBtn = document.createElement('button');
+                renameBtn.className = 'bm-icon-btn';
+                renameBtn.title = 'Rename group';
+                renameBtn.textContent = 'Rename';
+                renameBtn.addEventListener('click', function () {
+                    startRenameGroup(card, group.name);
+                });
+                headRow.appendChild(renameBtn);
+
+                var delGrpBtn = document.createElement('button');
+                delGrpBtn.className = 'bm-icon-btn danger';
+                delGrpBtn.title = 'Delete group';
+                delGrpBtn.textContent = 'Del';
+                delGrpBtn.addEventListener('click', function () {
+                    if (confirm('Delete group "' + group.name + '" and all its bookmarks?')) {
+                        deleteGroup(group.name);
+                    }
+                });
+                headRow.appendChild(delGrpBtn);
+
+                card.appendChild(headRow);
+            } else {
+                var heading = document.createElement('h3');
+                heading.className = 'sidebar-heading';
+                heading.textContent = group.name;
+                card.appendChild(heading);
+            }
+
+            var list = document.createElement('div');
+            list.className = 'sidebar-links';
 
             group.items.forEach(function (link) {
-                var a = document.createElement('a');
-                a.href = link.url;
-                a.className = 'link-item';
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                a.textContent = link.name;
-                category.appendChild(a);
+                if (editMode) {
+                    var row = document.createElement('div');
+                    row.className = 'sidebar-link-row';
+
+                    var a = document.createElement('a');
+                    a.href = link.url;
+                    a.className = 'sidebar-link';
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    a.textContent = link.name;
+                    row.appendChild(a);
+
+                    var actions = document.createElement('div');
+                    actions.className = 'bm-link-actions';
+
+                    var editBtn = document.createElement('button');
+                    editBtn.className = 'bm-icon-btn';
+                    editBtn.title = 'Edit';
+                    editBtn.textContent = 'Edit';
+                    editBtn.addEventListener('click', function () {
+                        startEditBookmark(list, link);
+                    });
+                    actions.appendChild(editBtn);
+
+                    var delBtn = document.createElement('button');
+                    delBtn.className = 'bm-icon-btn danger';
+                    delBtn.title = 'Delete';
+                    delBtn.textContent = 'Del';
+                    delBtn.addEventListener('click', function () {
+                        if (confirm('Delete "' + link.name + '"?')) {
+                            deleteBookmark(link.id);
+                        }
+                    });
+                    actions.appendChild(delBtn);
+
+                    row.appendChild(actions);
+                    list.appendChild(row);
+                } else {
+                    var a = document.createElement('a');
+                    a.href = link.url;
+                    a.className = 'sidebar-link';
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    a.textContent = link.name;
+                    list.appendChild(a);
+                }
             });
 
-            section.appendChild(category);
+            card.appendChild(list);
+
+            // "+" button to add a bookmark to this group
+            if (editMode) {
+                var addBtn = document.createElement('button');
+                addBtn.className = 'bm-add-btn';
+                addBtn.textContent = '+ Add Link';
+                addBtn.addEventListener('click', function () {
+                    startAddBookmark(card, group.name);
+                });
+                card.appendChild(addBtn);
+            }
+
+            sidebar.appendChild(card);
         });
 
-        container.appendChild(section);
-    }
+        // Sidebar group reorder + "Add Group" button in edit mode
+        if (editMode) {
+            setupSidebarGroupDragDrop(sidebar);
 
-    // --- Status Checks ---
-
-    function checkAllStatuses() {
-        var cards = document.querySelectorAll('.card');
-        cards.forEach(function (card) {
-            var dot = card.querySelector('.status-dot');
-            var url = card.href;
-            checkStatus(url, dot);
-        });
-    }
-
-    async function checkStatus(url, dotElement) {
-        try {
-            await fetch(url, {
-                method: 'HEAD',
-                mode: 'no-cors',
-                cache: 'no-store'
+            var addGrpBtn = document.createElement('button');
+            addGrpBtn.className = 'bm-add-group-btn';
+            addGrpBtn.textContent = '+ Add Group';
+            addGrpBtn.addEventListener('click', function () {
+                startAddGroup(sidebar);
             });
-            dotElement.classList.add('status-up');
-            dotElement.classList.remove('status-down');
-        } catch (e) {
-            dotElement.classList.add('status-down');
-            dotElement.classList.remove('status-up');
+            sidebar.appendChild(addGrpBtn);
         }
+    }
+
+    // --- Bookmark CRUD helpers ---
+
+    function startAddBookmark(cardEl, groupName) {
+        removeInlineForms();
+
+        var form = document.createElement('div');
+        form.className = 'bm-inline-form';
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Name';
+
+        var urlInput = document.createElement('input');
+        urlInput.type = 'text';
+        urlInput.placeholder = 'URL';
+
+        var actions = document.createElement('div');
+        actions.className = 'bm-form-actions';
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'bm-btn bm-btn-primary';
+        saveBtn.textContent = 'Save';
+        saveBtn.addEventListener('click', function () {
+            if (nameInput.value && urlInput.value) {
+                createBookmark(groupName, nameInput.value, urlInput.value);
+            }
+        });
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'bm-btn bm-btn-secondary';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            form.remove();
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        form.appendChild(nameInput);
+        form.appendChild(urlInput);
+        form.appendChild(actions);
+        cardEl.appendChild(form);
+        nameInput.focus();
+    }
+
+    function startEditBookmark(listEl, bookmark) {
+        removeInlineForms();
+
+        var form = document.createElement('div');
+        form.className = 'bm-inline-form';
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Name';
+        nameInput.value = bookmark.name;
+
+        var urlInput = document.createElement('input');
+        urlInput.type = 'text';
+        urlInput.placeholder = 'URL';
+        urlInput.value = bookmark.url;
+
+        var actions = document.createElement('div');
+        actions.className = 'bm-form-actions';
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'bm-btn bm-btn-primary';
+        saveBtn.textContent = 'Save';
+        saveBtn.addEventListener('click', function () {
+            if (nameInput.value && urlInput.value) {
+                updateBookmark(bookmark.id, nameInput.value, urlInput.value);
+            }
+        });
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'bm-btn bm-btn-secondary';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            form.remove();
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        form.appendChild(nameInput);
+        form.appendChild(urlInput);
+        form.appendChild(actions);
+        listEl.appendChild(form);
+        nameInput.focus();
+        nameInput.select();
+    }
+
+    function startRenameGroup(cardEl, oldName) {
+        removeInlineForms();
+
+        var form = document.createElement('div');
+        form.className = 'bm-inline-form';
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Group name';
+        nameInput.value = oldName;
+
+        var actions = document.createElement('div');
+        actions.className = 'bm-form-actions';
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'bm-btn bm-btn-primary';
+        saveBtn.textContent = 'Save';
+        saveBtn.addEventListener('click', function () {
+            if (nameInput.value && nameInput.value !== oldName) {
+                renameGroup(oldName, nameInput.value);
+            } else {
+                form.remove();
+            }
+        });
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'bm-btn bm-btn-secondary';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            form.remove();
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        form.appendChild(nameInput);
+        form.appendChild(actions);
+        cardEl.insertBefore(form, cardEl.children[1]);
+        nameInput.focus();
+        nameInput.select();
+    }
+
+    function startAddGroup(sidebarEl) {
+        removeInlineForms();
+
+        var form = document.createElement('div');
+        form.className = 'bm-inline-form';
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'New group name';
+
+        var actions = document.createElement('div');
+        actions.className = 'bm-form-actions';
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'bm-btn bm-btn-primary';
+        saveBtn.textContent = 'Create';
+        saveBtn.addEventListener('click', function () {
+            if (nameInput.value) {
+                createGroup(nameInput.value);
+            }
+        });
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'bm-btn bm-btn-secondary';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+            form.remove();
+        });
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        form.appendChild(nameInput);
+        form.appendChild(actions);
+        // Insert before the "Add Group" button
+        var addGrpBtn = sidebarEl.querySelector('.bm-add-group-btn');
+        sidebarEl.insertBefore(form, addGrpBtn);
+        nameInput.focus();
+    }
+
+    function removeInlineForms() {
+        document.querySelectorAll('.bm-inline-form').forEach(function (f) { f.remove(); });
+    }
+
+    // --- Bookmark API calls ---
+
+    async function createBookmark(groupName, name, url) {
+        var res = await bmFetch(BOOKMARKS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ group_name: groupName, name: name, url: url }),
+        });
+        if (res.ok) await loadAndRenderBookmarks();
+    }
+
+    async function updateBookmark(id, name, url) {
+        var res = await bmFetch(BOOKMARKS_URL + '/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, url: url }),
+        });
+        if (res.ok) await loadAndRenderBookmarks();
+    }
+
+    async function deleteBookmark(id) {
+        var res = await bmFetch(BOOKMARKS_URL + '/' + id, { method: 'DELETE' });
+        if (res.ok) await loadAndRenderBookmarks();
+    }
+
+    async function createGroup(name) {
+        var res = await bmFetch(BOOKMARKS_URL + '/groups', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name }),
+        });
+        if (res.ok) {
+            bookmarkData.push({ name: name, items: [] });
+            renderSidebar(bookmarkData);
+        }
+    }
+
+    async function renameGroup(oldName, newName) {
+        var res = await bmFetch(BOOKMARKS_URL + '/groups/' + encodeURIComponent(oldName), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_name: newName }),
+        });
+        if (res.ok) await loadAndRenderBookmarks();
+    }
+
+    async function deleteGroup(name) {
+        var res = await bmFetch(BOOKMARKS_URL + '/groups/' + encodeURIComponent(name), {
+            method: 'DELETE',
+        });
+        if (res.ok) await loadAndRenderBookmarks();
+    }
+
+    // --- Login Modal ---
+
+    function setupLoginModal() {
+        var modal = document.getElementById('bm-login-modal');
+        var closeBtn = document.getElementById('bm-login-close');
+        var form = document.getElementById('bm-login-form');
+
+        closeBtn.addEventListener('click', function () {
+            modal.classList.add('hidden');
+            resetLoginForm();
+        });
+
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+                resetLoginForm();
+            }
+        });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            handleLogin();
+        });
+    }
+
+    function showLoginModal() {
+        resetLoginForm();
+        document.getElementById('bm-login-modal').classList.remove('hidden');
+        document.getElementById('bm-login-user').focus();
+    }
+
+    function resetLoginForm() {
+        document.getElementById('bm-login-user').value = '';
+        document.getElementById('bm-login-pass').value = '';
+        document.getElementById('bm-login-totp').value = '';
+        document.getElementById('bm-totp-row').classList.add('hidden');
+        document.getElementById('bm-login-error').classList.add('hidden');
+    }
+
+    var _partialToken = null; // for TOTP step 2
+
+    async function handleLogin() {
+        var errorEl = document.getElementById('bm-login-error');
+        errorEl.classList.add('hidden');
+
+        var totpRow = document.getElementById('bm-totp-row');
+
+        // If TOTP step is visible, we're doing step 2
+        if (_partialToken) {
+            var code = document.getElementById('bm-login-totp').value.trim();
+            if (!code) return;
+
+            try {
+                var res = await fetch('/api/auth/verify-totp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ partial_token: _partialToken, totp_code: code }),
+                });
+                var data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Invalid code');
+
+                setAuthToken(data.token);
+                _partialToken = null;
+                document.getElementById('bm-login-modal').classList.add('hidden');
+                editMode = true;
+                refreshEditMode();
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Step 1: username + password
+        var username = document.getElementById('bm-login-user').value.trim();
+        var password = document.getElementById('bm-login-pass').value;
+        if (!username || !password) return;
+
+        try {
+            var res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, password: password }),
+            });
+            var data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Login failed');
+
+            if (data.requires_totp) {
+                _partialToken = data.partial_token;
+                totpRow.classList.remove('hidden');
+                document.getElementById('bm-login-totp').focus();
+            } else {
+                setAuthToken(data.token);
+                document.getElementById('bm-login-modal').classList.add('hidden');
+                editMode = true;
+                refreshEditMode();
+            }
+        } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    // --- Status Checks (server-side) ---
+
+    async function checkAllStatuses() {
+        try {
+            var res = await fetch(STATUS_URL, { cache: 'no-store' });
+            if (!res.ok) return;
+            var statusMap = await res.json(); // { "id": true/false }
+            Object.keys(statusMap).forEach(function (id) {
+                var card = document.querySelector('.card[data-id="' + id + '"]');
+                if (!card) return;
+                var dot = card.querySelector('.status-dot');
+                if (!dot) return;
+                if (statusMap[id]) {
+                    dot.classList.add('status-up');
+                    dot.classList.remove('status-down');
+                } else {
+                    dot.classList.add('status-down');
+                    dot.classList.remove('status-up');
+                }
+            });
+        } catch (e) {
+            // Silently fail — dots stay grey
+        }
+    }
+
+    // --- Drag-and-Drop Reorder ---
+
+    function setupGridDragDrop(grid) {
+        grid.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            var dragging = grid.querySelector('.dragging');
+            if (!dragging) return;
+
+            // Find the card we're hovering over (excluding the add button and placeholder)
+            var cards = Array.from(grid.querySelectorAll('.card:not(.dragging)'));
+            var closest = null;
+            var closestDist = Infinity;
+
+            cards.forEach(function (card) {
+                var rect = card.getBoundingClientRect();
+                var centerX = rect.left + rect.width / 2;
+                var centerY = rect.top + rect.height / 2;
+                var dist = Math.hypot(e.clientX - centerX, e.clientY - centerY);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closest = card;
+                }
+            });
+
+            if (closest) {
+                var rect = closest.getBoundingClientRect();
+                var midX = rect.left + rect.width / 2;
+                // Insert before or after the closest card
+                if (e.clientX < midX) {
+                    grid.insertBefore(dragging, closest);
+                } else {
+                    grid.insertBefore(dragging, closest.nextSibling);
+                }
+            }
+        });
+
+        grid.addEventListener('drop', function (e) {
+            e.preventDefault();
+            // Collect the new order of card IDs from DOM position
+            var cards = grid.querySelectorAll('.card[data-id]');
+            var ids = Array.from(cards).map(function (c) {
+                return parseInt(c.getAttribute('data-id'), 10);
+            });
+            // Persist to backend
+            reorderServices(ids);
+        });
+    }
+
+    async function reorderServices(ids) {
+        await bmFetch(SERVICES_URL + '/reorder', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: ids }),
+        });
+        await loadAndRenderServices();
+    }
+
+    // --- Group-level Drag-and-Drop (categories + sidebar groups) ---
+
+    function setupCategoryDragDrop(container) {
+        container.addEventListener('dragover', function (e) {
+            // Only handle category drags (not card drags inside grids)
+            var dragging = container.querySelector('.category.dragging-group');
+            if (!dragging) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            var sections = Array.from(container.querySelectorAll('.category:not(.dragging-group)'));
+            var closest = null;
+            var closestDist = Infinity;
+
+            sections.forEach(function (sec) {
+                var rect = sec.getBoundingClientRect();
+                var centerY = rect.top + rect.height / 2;
+                var dist = Math.abs(e.clientY - centerY);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closest = sec;
+                }
+            });
+
+            if (closest) {
+                var rect = closest.getBoundingClientRect();
+                var midY = rect.top + rect.height / 2;
+                if (e.clientY < midY) {
+                    container.insertBefore(dragging, closest);
+                } else {
+                    container.insertBefore(dragging, closest.nextSibling);
+                }
+            }
+        });
+
+        container.addEventListener('drop', function (e) {
+            var dragging = container.querySelector('.category.dragging-group');
+            if (!dragging) return;
+            e.preventDefault();
+            var sections = container.querySelectorAll('.category[data-category]');
+            var names = Array.from(sections).map(function (s) {
+                return s.getAttribute('data-category');
+            });
+            reorderCategories(names);
+        });
+    }
+
+    async function reorderCategories(names) {
+        await bmFetch(SERVICES_URL + '/categories/reorder', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ names: names }),
+        });
+        await loadAndRenderServices();
+    }
+
+    function setupSidebarGroupDragDrop(sidebar) {
+        sidebar.addEventListener('dragover', function (e) {
+            var dragging = sidebar.querySelector('.sidebar-card.dragging-group');
+            if (!dragging) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            var cards = Array.from(sidebar.querySelectorAll('.sidebar-card:not(.dragging-group)'));
+            var closest = null;
+            var closestDist = Infinity;
+
+            cards.forEach(function (c) {
+                var rect = c.getBoundingClientRect();
+                var centerY = rect.top + rect.height / 2;
+                var dist = Math.abs(e.clientY - centerY);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closest = c;
+                }
+            });
+
+            if (closest) {
+                var rect = closest.getBoundingClientRect();
+                var midY = rect.top + rect.height / 2;
+                if (e.clientY < midY) {
+                    sidebar.insertBefore(dragging, closest);
+                } else {
+                    sidebar.insertBefore(dragging, closest.nextSibling);
+                }
+            }
+        });
+
+        sidebar.addEventListener('drop', function (e) {
+            var dragging = sidebar.querySelector('.sidebar-card.dragging-group');
+            if (!dragging) return;
+            e.preventDefault();
+            var cards = sidebar.querySelectorAll('.sidebar-card[data-group]');
+            var names = Array.from(cards).map(function (c) {
+                return c.getAttribute('data-group');
+            });
+            reorderBookmarkGroups(names);
+        });
+    }
+
+    async function reorderBookmarkGroups(names) {
+        await bmFetch(BOOKMARKS_URL + '/groups/reorder', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ names: names }),
+        });
+        await loadAndRenderBookmarks();
     }
 
     // --- System Stats ---
@@ -312,8 +1387,8 @@
         document.addEventListener('keydown', function (e) {
             var searchInput = document.getElementById('search');
             var braveInput = document.querySelector('#brave-search input');
-            var isTyping = document.activeElement === searchInput ||
-                           document.activeElement === braveInput;
+            var tag = document.activeElement && document.activeElement.tagName;
+            var isTyping = tag === 'INPUT' || tag === 'TEXTAREA';
 
             // "/" focuses search
             if (e.key === '/' && !isTyping) {
@@ -322,8 +1397,19 @@
                 return;
             }
 
-            // Escape clears search and blurs
+            // Escape: close modal / remove inline forms / clear search
             if (e.key === 'Escape') {
+                var modal = document.getElementById('bm-login-modal');
+                if (!modal.classList.contains('hidden')) {
+                    modal.classList.add('hidden');
+                    resetLoginForm();
+                    return;
+                }
+                var forms = document.querySelectorAll('.bm-inline-form');
+                if (forms.length) {
+                    forms.forEach(function (f) { f.remove(); });
+                    return;
+                }
                 searchInput.value = '';
                 filterServices('');
                 searchInput.blur();
@@ -331,14 +1417,17 @@
                 return;
             }
 
-            // Number keys open shortcuts (only when not typing in search)
+            // Number keys open shortcuts (only when not typing)
             if (!isTyping && e.key >= '1' && e.key <= '9') {
                 var card = document.querySelector('.card[data-shortcut="' + e.key + '"]:not(.hidden)');
                 if (card) {
-                    if (card.href.startsWith(location.origin + '/')) {
-                        location.href = card.href;
-                    } else {
-                        window.open(card.href, '_blank', 'noopener,noreferrer');
+                    var href = card.href || card.getAttribute('data-url');
+                    if (href) {
+                        if (href.startsWith(location.origin + '/')) {
+                            location.href = href;
+                        } else {
+                            window.open(href, '_blank', 'noopener,noreferrer');
+                        }
                     }
                 }
                 return;
