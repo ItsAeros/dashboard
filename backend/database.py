@@ -129,18 +129,11 @@ def seed_services():
         conn.close()
         return
 
-    # Default services (previously stored in services.json)
+    # Default services for a fresh install — replace with your own URLs after setup
     defaults = [
         # (category, name, url, icon, shortcut, sort_order)
-        ("Services", "Vaultwarden", "https://vault.pmserver.us/#/vault", "🔐", 1, 0),
-        ("Services", "Nextcloud", "https://files.pmserver.us/", "📁", 2, 1),
-        ("Services", "n8n", "https://n8n.pmserver.us/", "🤖", 3, 2),
-        ("Server Management", "Portainer", "https://100.116.108.52:9443/#!/home", "🐳", 4, 0),
-        ("Server Management", "Cockpit", "https://pmserver.taildd03d9.ts.net:9090/system", "🖥️", 5, 1),
-        ("Server Management", "Tailscale", "https://login.tailscale.com/admin/machines?refreshed=true", "🔗", 6, 2),
-        ("Domain/DNS", "Namecheap", "https://www.namecheap.com/myaccount", "🌐", 7, 0),
-        ("Domain/DNS", "Cloudflare Tunnels", "https://one.dash.cloudflare.com/8f3faff408b5f54974352e52a4af978f/networks/connectors/cloudflare-tunnels/cfd_tunnel/475355a4-afce-4fc4-8b90-cd1e5da2fb60/edit?tab=publicHostname", "🚇", 8, 1),
-        ("Domain/DNS", "Cloudflare DNS", "https://dash.cloudflare.com/8f3faff408b5f54974352e52a4af978f/pmserver.us/dns/records", "📋", 9, 2),
+        ("Services", "Example Service", "https://example.com", "🔐", 1, 0),
+        ("Server Management", "Portainer", "https://localhost:9443", "🐳", 2, 0),
         ("API Tools", "Plaid Dashboard", "https://dashboard.plaid.com/overview", "🏦", None, 0),
     ]
     for category, name, url, icon, shortcut, sort_order in defaults:
