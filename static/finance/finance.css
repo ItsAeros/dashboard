@@ -352,6 +352,18 @@
 
 /* --- Responsive --- */
 @media (max-width: 600px) {
+    .finance-nav {
+        position: relative;
+        justify-content: flex-start;
+    }
+
+    .finance-nav h1 {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+    }
+
     .bar-label {
         min-width: 80px;
         font-size: 0.75em;
