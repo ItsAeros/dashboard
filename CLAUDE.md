@@ -50,7 +50,7 @@ API docs at http://localhost:8000/api/docs
 - `backend/routers/services.py` — Service card CRUD + category management
 - `static/app.js` — Dashboard: service grid from API, bookmark sidebar, edit mode for both, status checks (HEAD every 60s), system stats, keyboard nav (/, 1-9, arrows)
 - `static/finance/finance.js` — Finance SPA: two-step login, `apiFetch()` wrapper with auto-logout on 401, Plaid Link widget, bar charts
-- `nginx.conf` — Mounted into Docker container for static serving
+- `nginx.conf` — Mounted into Docker container for static serving. Note: the CSP `connect-src` directive was stripped of internal URLs (subdomains, internal IPs) for the public repo. If fetches to internal services break, add them back locally — the nginx CSP only governs the static container, not the FastAPI backend.
 
 ## Conventions
 
