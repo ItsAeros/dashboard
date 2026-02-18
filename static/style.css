@@ -746,20 +746,29 @@ body {
 
 @media (max-width: 768px) {
     #top-panel {
-        flex-direction: column;
-        align-items: stretch;
+        flex-wrap: wrap;
         gap: 12px;
     }
 
+    .header-logo {
+        width: 48px;
+        height: 48px;
+        max-width: 48px;
+    }
+
     #header {
-        text-align: center;
+        flex: 1;
+        min-width: 0;
+        text-align: left;
     }
 
     #brave-search-wrapper {
+        flex: 0 0 100%;
         justify-content: center;
     }
 
     #stats-widget {
+        flex: 0 0 100%;
         align-items: center;
         text-align: center;
     }
