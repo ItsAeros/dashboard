@@ -746,8 +746,10 @@ body {
 
 @media (max-width: 768px) {
     #top-panel {
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: 48px 1fr;
         gap: 12px;
+        align-items: center;
     }
 
     .header-logo {
@@ -757,18 +759,17 @@ body {
     }
 
     #header {
-        flex: 1;
         min-width: 0;
         text-align: left;
     }
 
     #brave-search-wrapper {
-        flex: 0 0 100%;
+        grid-column: 1 / -1;
         justify-content: center;
     }
 
     #stats-widget {
-        flex: 0 0 100%;
+        grid-column: 1 / -1;
         align-items: center;
         text-align: center;
     }
