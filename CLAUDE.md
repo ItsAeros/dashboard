@@ -53,6 +53,15 @@ Bump `?v=N` query strings in `index.html` when changing `style.css` or `app.js` 
 - `static/style.css` — Dark theme, responsive grid
 - `docker-compose.yml` — Container config with bind mounts
 
+## Dev Practices
+
+- Clean up after yourself: remove orphaned containers/volumes/networks, don't leave dead config
+- If you recreate containers, verify data volumes are reattached, not newly created empty ones
+- Keep backups until the replacement is verified and working, then clean up
+- Never store secrets in plaintext or commit them to repos
+- Auth required on all mutation endpoints — use `require_auth()` dependency
+- Use `secrets.compare_digest` for constant-time password comparison
+
 ## Conventions
 
 - All secrets in `.env` (gitignored), template in `.env.example`
