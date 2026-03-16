@@ -63,8 +63,8 @@ body {
     margin-top: 2px;
 }
 
-/* --- Brave Search --- */
-#brave-search-wrapper {
+/* --- Service Filter (in top panel) --- */
+#search-wrapper {
     flex: 1;
     display: flex;
     align-items: center;
@@ -72,52 +72,22 @@ body {
     min-width: 0;
 }
 
-#brave-search {
-    width: 100%;
-}
-
-#brave-search input {
-    background: #1a1a2e;
-    border: 2px solid #fb542b;
+#search {
+    background: #1e1e1e;
+    border: 1px solid #333;
     border-radius: 24px;
     color: #e0e0e0;
-    padding: 10px 20px;
-    font-size: 1em;
+    padding: 8px 20px;
+    font-size: 0.9em;
     width: 100%;
+    max-width: 400px;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-#brave-search input:focus {
-    border-color: #ff7654;
-    box-shadow: 0 0 12px rgba(251, 84, 43, 0.3);
-}
-
-#brave-search input::placeholder {
-    color: #777;
-}
-
-/* --- Service Filter --- */
-#search-wrapper {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-#search {
-    background: #1e1e1e;
-    border: 1px solid #333;
-    border-radius: 8px;
-    color: #e0e0e0;
-    padding: 10px 16px;
-    font-size: 1em;
-    width: 100%;
-    max-width: 400px;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
 #search:focus {
     border-color: #555;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.05);
 }
 
 #search::placeholder {
@@ -219,7 +189,22 @@ body {
 
 .card .icon {
     font-size: 3em;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 10px;
+    line-height: 1;
+    overflow: hidden;
+}
+
+.card .icon img {
+    max-width: 64px;
+    max-height: 64px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
 }
 
 .card .title {
@@ -559,10 +544,21 @@ body {
     transform: none;
 }
 
-/* Drag-and-drop: card being dragged */
-.card.dragging {
-    opacity: 0.4;
-    transform: scale(0.95);
+/* Drag-and-drop: card removed from grid while being dragged */
+.card-drag-hidden {
+    display: none !important;
+}
+
+/* Drag-and-drop: placeholder showing where card will land */
+.drag-placeholder {
+    border: 2px dashed #555;
+    border-radius: 12px;
+    background: rgba(76, 175, 80, 0.05);
+}
+
+/* Hide edit overlays on other cards during active drag */
+.grid-dragging .card-edit-overlay {
+    display: none !important;
 }
 
 /* Drag-and-drop: group/category being dragged */
@@ -570,6 +566,33 @@ body {
     opacity: 0.4;
     border: 2px dashed #555;
     border-radius: 12px;
+}
+
+.card-drag-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 28px;
+    cursor: grab;
+    z-index: 2;
+    border-radius: 12px 0 0 12px;
+    background-color: rgba(255, 255, 255, 0.06);
+    background-image: radial-gradient(circle, #bbb 2px, transparent 2px);
+    background-size: 10px 12px;
+    background-position: center;
+    background-repeat: repeat-y;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    transition: background-color 0.15s;
+}
+
+.card-drag-handle:hover {
+    background-color: rgba(76, 175, 80, 0.15);
+    background-image: radial-gradient(circle, #4caf50 2px, transparent 2px);
+}
+
+.card-drag-handle:active {
+    cursor: grabbing;
 }
 
 .card-edit-overlay {
@@ -583,6 +606,11 @@ body {
     gap: 8px;
     opacity: 0;
     transition: opacity 0.15s;
+    pointer-events: none;
+}
+
+.card-editable:hover .card-edit-overlay button {
+    pointer-events: auto;
 }
 
 .card-editable:hover .card-edit-overlay {
@@ -597,6 +625,77 @@ body {
 
 .svc-icon-input {
     max-width: 120px;
+}
+
+.svc-icon-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.svc-icon-or {
+    color: #666;
+    font-size: 0.8em;
+    flex-shrink: 0;
+}
+
+.svc-icon-dropzone {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 2px dashed #444;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.svc-icon-dropzone:hover,
+.svc-icon-dropzone.dragover {
+    border-color: #2563eb;
+    background: rgba(37, 99, 235, 0.1);
+}
+
+.svc-icon-dropzone-label {
+    font-size: 0.8em;
+    color: #666;
+    pointer-events: none;
+}
+
+.svc-icon-preview {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 4px;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+.svc-icon-clear {
+    background: none;
+    border: 1px solid #444;
+    color: #888;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 1em;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.svc-icon-clear:hover {
+    background: #3a1a1a;
+    color: #f44336;
+    border-color: #f44336;
 }
 
 .svc-shortcut-input {
@@ -763,7 +862,7 @@ body {
         text-align: left;
     }
 
-    #brave-search-wrapper {
+    #search-wrapper {
         grid-column: 1 / -1;
         justify-content: center;
     }

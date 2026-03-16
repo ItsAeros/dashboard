@@ -23,43 +23,6 @@ def create_tables():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.executescript("""
-        CREATE TABLE IF NOT EXISTS plaid_items (
-            id TEXT PRIMARY KEY,
-            institution_name TEXT,
-            access_token TEXT NOT NULL,
-            cursor TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS accounts (
-            id TEXT PRIMARY KEY,
-            plaid_item_id TEXT NOT NULL,
-            name TEXT NOT NULL,
-            type TEXT NOT NULL,
-            subtype TEXT,
-            institution_name TEXT,
-            mask TEXT,
-            current_balance REAL,
-            available_balance REAL,
-            currency TEXT DEFAULT 'USD',
-            last_synced_at TEXT,
-            created_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (plaid_item_id) REFERENCES plaid_items(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS transactions (
-            id TEXT PRIMARY KEY,
-            account_id TEXT NOT NULL,
-            amount REAL NOT NULL,
-            date TEXT NOT NULL,
-            name TEXT NOT NULL,
-            merchant_name TEXT,
-            category TEXT,
-            pending INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (account_id) REFERENCES accounts(id)
-        );
-
         CREATE TABLE IF NOT EXISTS bookmarks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             group_name TEXT NOT NULL,

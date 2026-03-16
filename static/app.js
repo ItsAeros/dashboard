@@ -17,7 +17,6 @@
         renderClock();
         setInterval(updateClock, CLOCK_INTERVAL);
 
-        renderBraveSearch();
         renderSearchBar();
 
         await loadAndRenderServices();
@@ -83,26 +82,6 @@
         greetingEl.textContent = getGreeting(now.getHours());
     }
 
-    // --- Brave Search ---
-
-    function renderBraveSearch() {
-        var wrapper = document.getElementById('brave-search-wrapper');
-        var form = document.createElement('form');
-        form.id = 'brave-search';
-        form.action = 'https://search.brave.com/search';
-        form.method = 'GET';
-        form.target = '_blank';
-
-        var input = document.createElement('input');
-        input.type = 'text';
-        input.name = 'q';
-        input.placeholder = 'Search with Brave...';
-        input.autocomplete = 'off';
-
-        form.appendChild(input);
-        wrapper.appendChild(form);
-    }
-
     // --- Service Filter ---
 
     function renderSearchBar() {
@@ -144,19 +123,6 @@
             section.setAttribute('data-category', cat.name);
 
             if (editMode) {
-                // Make category section draggable for group reordering
-                section.draggable = true;
-                section.addEventListener('dragstart', function (e) {
-                    // Only drag by the heading row, not child cards
-                    if (e.target !== section) return;
-                    e.dataTransfer.setData('text/plain', 'category:' + cat.name);
-                    e.dataTransfer.effectAllowed = 'move';
-                    section.classList.add('dragging-group');
-                });
-                section.addEventListener('dragend', function () {
-                    section.classList.remove('dragging-group');
-                });
-
                 // Editable category header with rename/delete
                 var headRow = document.createElement('div');
                 headRow.className = 'svc-heading-row';
@@ -185,6 +151,18 @@
                 });
                 headRow.appendChild(delCatBtn);
 
+                // Make heading row the drag handle for category reordering
+                headRow.draggable = true;
+                headRow.style.cursor = 'grab';
+                headRow.addEventListener('dragstart', function (e) {
+                    e.dataTransfer.setData('text/plain', 'category:' + cat.name);
+                    e.dataTransfer.effectAllowed = 'move';
+                    section.classList.add('dragging-group');
+                });
+                headRow.addEventListener('dragend', function () {
+                    section.classList.remove('dragging-group');
+                });
+
                 section.appendChild(headRow);
             } else {
                 var heading = document.createElement('h2');
@@ -203,10 +181,8 @@
                 }
             });
 
-            // Drag-and-drop reorder + "+ Add Service" button in edit mode
+            // "+ Add Service" button in edit mode
             if (editMode) {
-                setupGridDragDrop(grid);
-
                 var addBtn = document.createElement('button');
                 addBtn.className = 'svc-add-btn';
                 addBtn.textContent = '+ Add Service';
@@ -220,8 +196,9 @@
             container.appendChild(section);
         });
 
-        // Category group reorder + "+ Add Category" button in edit mode
+        // Drag-and-drop reorder (cards across all grids) + category reorder
         if (editMode) {
+            setupServiceDragDrop(container);
             setupCategoryDragDrop(container);
 
             var addCatBtn = document.createElement('button');
@@ -234,15 +211,30 @@
         }
     }
 
+    function isIconUrl(icon) {
+        return icon && (icon.startsWith('/') || icon.startsWith('http://') || icon.startsWith('https://'));
+    }
+
+    function createIconElement(iconValue) {
+        var icon = document.createElement('div');
+        icon.className = 'icon';
+        if (isIconUrl(iconValue)) {
+            var img = document.createElement('img');
+            img.src = iconValue;
+            img.alt = '';
+            img.loading = 'lazy';
+            icon.appendChild(img);
+        } else {
+            icon.textContent = iconValue;
+        }
+        return icon;
+    }
+
     function renderCard(service) {
         var a = document.createElement('a');
         a.href = service.url;
         a.className = 'card';
-        // Open external links in new tab, internal links in same tab
-        if (!service.url.startsWith('/')) {
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-        }
+
         a.setAttribute('data-id', service.id);
         a.setAttribute('data-name', service.name.toLowerCase());
         if (service.shortcut) {
@@ -253,10 +245,7 @@
         dot.className = 'status-dot';
         a.appendChild(dot);
 
-        var icon = document.createElement('div');
-        icon.className = 'icon';
-        icon.textContent = service.icon;
-        a.appendChild(icon);
+        a.appendChild(createIconElement(service.icon));
 
         var title = document.createElement('div');
         title.className = 'title';
@@ -278,27 +267,15 @@
         wrapper.className = 'card card-editable';
         wrapper.setAttribute('data-id', service.id);
         wrapper.setAttribute('data-name', service.name.toLowerCase());
-        wrapper.draggable = true;
         if (service.shortcut) {
             wrapper.setAttribute('data-shortcut', service.shortcut);
         }
 
-        // Drag events
-        wrapper.addEventListener('dragstart', function (e) {
-            e.dataTransfer.setData('text/plain', String(service.id));
-            e.dataTransfer.effectAllowed = 'move';
-            wrapper.classList.add('dragging');
-        });
-        wrapper.addEventListener('dragend', function () {
-            wrapper.classList.remove('dragging');
-            // Remove any leftover placeholders
-            document.querySelectorAll('.drag-placeholder').forEach(function (p) { p.remove(); });
-        });
+        var handle = document.createElement('div');
+        handle.className = 'card-drag-handle';
+        wrapper.appendChild(handle);
 
-        var icon = document.createElement('div');
-        icon.className = 'icon';
-        icon.textContent = service.icon;
-        wrapper.appendChild(icon);
+        wrapper.appendChild(createIconElement(service.icon));
 
         var title = document.createElement('div');
         title.className = 'title';
@@ -340,6 +317,136 @@
 
     // --- Service CRUD helpers ---
 
+    function buildIconInput(currentValue) {
+        var hasImage = isIconUrl(currentValue);
+        var iconValue = currentValue;
+
+        var row = document.createElement('div');
+        row.className = 'svc-icon-row';
+
+        // Emoji input
+        var emojiInput = document.createElement('input');
+        emojiInput.type = 'text';
+        emojiInput.placeholder = 'Emoji';
+        emojiInput.className = 'svc-icon-input';
+        emojiInput.value = hasImage ? '' : currentValue;
+
+        // "or" label
+        var orLabel = document.createElement('span');
+        orLabel.className = 'svc-icon-or';
+        orLabel.textContent = 'or';
+
+        // Drop zone / file area
+        var dropZone = document.createElement('label');
+        dropZone.className = 'svc-icon-dropzone';
+
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+
+        var dropLabel = document.createElement('span');
+        dropLabel.className = 'svc-icon-dropzone-label';
+        dropLabel.textContent = 'Drop image or click';
+
+        var preview = document.createElement('img');
+        preview.className = 'svc-icon-preview';
+        if (hasImage) {
+            preview.src = currentValue;
+            preview.style.display = 'block';
+            dropLabel.style.display = 'none';
+        } else {
+            preview.style.display = 'none';
+        }
+
+        // Clear button (visible when an image is set)
+        var clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'svc-icon-clear';
+        clearBtn.textContent = '\u00d7';
+        clearBtn.title = 'Remove image';
+        clearBtn.style.display = hasImage ? '' : 'none';
+
+        dropZone.appendChild(fileInput);
+        dropZone.appendChild(dropLabel);
+        dropZone.appendChild(preview);
+
+        function uploadFile(file) {
+            if (!file || !file.type.startsWith('image/')) return;
+            dropLabel.textContent = 'Uploading\u2026';
+            var formData = new FormData();
+            formData.append('file', file);
+            bmFetch('/api/services/icons', { method: 'POST', body: formData })
+                .then(function (res) {
+                    if (!res.ok) throw new Error('Upload failed');
+                    return res.json();
+                })
+                .then(function (data) {
+                    iconValue = data.path;
+                    preview.src = data.path;
+                    preview.style.display = 'block';
+                    dropLabel.style.display = 'none';
+                    clearBtn.style.display = '';
+                    emojiInput.value = '';
+                })
+                .catch(function () {
+                    dropLabel.textContent = 'Upload failed';
+                    dropLabel.style.display = '';
+                });
+        }
+
+        // Typing emoji clears image
+        emojiInput.addEventListener('input', function () {
+            iconValue = emojiInput.value;
+            if (emojiInput.value) {
+                preview.style.display = 'none';
+                dropLabel.style.display = '';
+                dropLabel.textContent = 'Drop image or click';
+                clearBtn.style.display = 'none';
+                fileInput.value = '';
+            }
+        });
+
+        fileInput.addEventListener('change', function () {
+            if (fileInput.files[0]) uploadFile(fileInput.files[0]);
+        });
+
+        // Drag-and-drop on the drop zone
+        dropZone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', function () {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+        });
+
+        // Clear button resets to empty
+        clearBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            iconValue = '';
+            preview.style.display = 'none';
+            dropLabel.style.display = '';
+            dropLabel.textContent = 'Drop image or click';
+            clearBtn.style.display = 'none';
+            fileInput.value = '';
+        });
+
+        row.appendChild(emojiInput);
+        row.appendChild(orLabel);
+        row.appendChild(dropZone);
+        row.appendChild(clearBtn);
+
+        return {
+            el: row,
+            getValue: function () { return iconValue; }
+        };
+    }
+
     function startAddService(sectionEl, categoryName) {
         removeInlineForms();
 
@@ -354,10 +461,7 @@
         urlInput.type = 'text';
         urlInput.placeholder = 'URL';
 
-        var iconInput = document.createElement('input');
-        iconInput.type = 'text';
-        iconInput.placeholder = 'Icon (emoji)';
-        iconInput.className = 'svc-icon-input';
+        var iconRow = buildIconInput('');
 
         var shortcutInput = document.createElement('input');
         shortcutInput.type = 'number';
@@ -374,7 +478,7 @@
         saveBtn.textContent = 'Save';
         saveBtn.addEventListener('click', function () {
             if (nameInput.value && urlInput.value) {
-                createSvcItem(categoryName, nameInput.value, urlInput.value, iconInput.value, shortcutInput.value);
+                createSvcItem(categoryName, nameInput.value, urlInput.value, iconRow.getValue(), shortcutInput.value);
             }
         });
 
@@ -389,7 +493,7 @@
         actions.appendChild(saveBtn);
         form.appendChild(nameInput);
         form.appendChild(urlInput);
-        form.appendChild(iconInput);
+        form.appendChild(iconRow.el);
         form.appendChild(shortcutInput);
         form.appendChild(actions);
         sectionEl.appendChild(form);
@@ -412,11 +516,7 @@
         urlInput.placeholder = 'URL';
         urlInput.value = service.url;
 
-        var iconInput = document.createElement('input');
-        iconInput.type = 'text';
-        iconInput.placeholder = 'Icon (emoji)';
-        iconInput.value = service.icon || '';
-        iconInput.className = 'svc-icon-input';
+        var iconRow = buildIconInput(service.icon || '');
 
         var shortcutInput = document.createElement('input');
         shortcutInput.type = 'number';
@@ -434,7 +534,7 @@
         saveBtn.textContent = 'Save';
         saveBtn.addEventListener('click', function () {
             if (nameInput.value && urlInput.value) {
-                updateSvcItem(service.id, nameInput.value, urlInput.value, iconInput.value, shortcutInput.value);
+                updateSvcItem(service.id, nameInput.value, urlInput.value, iconRow.getValue(), shortcutInput.value);
             }
         });
 
@@ -449,7 +549,7 @@
         actions.appendChild(saveBtn);
         form.appendChild(nameInput);
         form.appendChild(urlInput);
-        form.appendChild(iconInput);
+        form.appendChild(iconRow.el);
         form.appendChild(shortcutInput);
         form.appendChild(actions);
         sectionEl.appendChild(form);
@@ -730,8 +830,6 @@
                     var a = document.createElement('a');
                     a.href = link.url;
                     a.className = 'sidebar-link';
-                    a.target = '_blank';
-                    a.rel = 'noopener noreferrer';
                     a.textContent = link.name;
                     row.appendChild(a);
 
@@ -764,8 +862,6 @@
                     var a = document.createElement('a');
                     a.href = link.url;
                     a.className = 'sidebar-link';
-                    a.target = '_blank';
-                    a.rel = 'noopener noreferrer';
                     a.textContent = link.name;
                     list.appendChild(a);
                 }
@@ -1157,52 +1253,173 @@
 
     // --- Drag-and-Drop Reorder ---
 
-    function setupGridDragDrop(grid) {
-        grid.addEventListener('dragover', function (e) {
+    function setupServiceDragDrop(container) {
+        container.addEventListener('pointerdown', function (e) {
+            if (!e.target.closest('.card-drag-handle')) return;
+            var card = e.target.closest('.card-editable');
+            if (!card) return;
+            if (e.button !== 0) return;
+
             e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
 
-            var dragging = grid.querySelector('.dragging');
-            if (!dragging) return;
+            var sourceGrid = card.closest('.grid');
+            var sourceSection = card.closest('.category');
+            var rect = card.getBoundingClientRect();
+            var startX = e.clientX;
+            var startY = e.clientY;
+            var offsetX = e.clientX - rect.left;
+            var offsetY = e.clientY - rect.top;
+            var cardW = rect.width;
+            var cardH = rect.height;
+            var clone = null;
+            var placeholder = null;
+            var started = false;
+            var rafId = 0;
+            var lastMoveTime = 0;
 
-            // Find the card we're hovering over (excluding the add button and placeholder)
-            var cards = Array.from(grid.querySelectorAll('.card:not(.dragging)'));
-            var closest = null;
-            var closestDist = Infinity;
-
-            cards.forEach(function (card) {
-                var rect = card.getBoundingClientRect();
-                var centerX = rect.left + rect.width / 2;
-                var centerY = rect.top + rect.height / 2;
-                var dist = Math.hypot(e.clientX - centerX, e.clientY - centerY);
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closest = card;
+            function findTargetGrid(y) {
+                // Use heading elements as stable anchors — headings don't shift
+                // when cards/placeholders move between grids
+                var sections = Array.from(container.querySelectorAll('.category'));
+                for (var i = sections.length - 1; i >= 0; i--) {
+                    var heading = sections[i].querySelector('.svc-heading-row, h2');
+                    if (heading) {
+                        var hRect = heading.getBoundingClientRect();
+                        if (y >= hRect.top) {
+                            return sections[i].querySelector('.grid');
+                        }
+                    }
                 }
-            });
+                return sections.length > 0 ? sections[0].querySelector('.grid') : null;
+            }
 
-            if (closest) {
-                var rect = closest.getBoundingClientRect();
-                var midX = rect.left + rect.width / 2;
-                // Insert before or after the closest card
-                if (e.clientX < midX) {
-                    grid.insertBefore(dragging, closest);
+            function applyPlaceholder(targetGrid, cx, cy) {
+                // Cooldown prevents oscillation from layout reflows
+                var now = Date.now();
+                if (now - lastMoveTime < 50) return;
+
+                var cards = Array.from(targetGrid.querySelectorAll('.card-editable:not(.card-drag-hidden)'));
+                var addBtn = targetGrid.querySelector('.svc-add-btn');
+                var insertBefore = addBtn; // default: end of grid
+
+                // Reading-order scan: find first card whose position is "after" cursor
+                for (var i = 0; i < cards.length; i++) {
+                    var r = cards[i].getBoundingClientRect();
+                    if (r.width === 0) continue;
+
+                    var inRow = cy >= r.top - 5 && cy <= r.bottom + 5;
+                    if (inRow) {
+                        if (cx < r.left + r.width / 2) {
+                            insertBefore = cards[i];
+                            break;
+                        }
+                    } else if (cy < r.top) {
+                        insertBefore = cards[i];
+                        break;
+                    }
+                }
+
+                // Skip if placeholder is already in correct position
+                if (placeholder.parentNode === targetGrid && placeholder.nextSibling === insertBefore) return;
+
+                lastMoveTime = now;
+                if (insertBefore) {
+                    targetGrid.insertBefore(placeholder, insertBefore);
                 } else {
-                    grid.insertBefore(dragging, closest.nextSibling);
+                    targetGrid.appendChild(placeholder);
                 }
             }
-        });
 
-        grid.addEventListener('drop', function (e) {
-            e.preventDefault();
-            // Collect the new order of card IDs from DOM position
-            var cards = grid.querySelectorAll('.card[data-id]');
-            var ids = Array.from(cards).map(function (c) {
-                return parseInt(c.getAttribute('data-id'), 10);
-            });
-            // Persist to backend
-            reorderServices(ids);
+            function onMove(ev) {
+                if (!started) {
+                    if (Math.abs(ev.clientX - startX) < 5 && Math.abs(ev.clientY - startY) < 5) return;
+                    started = true;
+
+                    clone = card.cloneNode(true);
+                    clone.style.cssText =
+                        'position:fixed;pointer-events:none;z-index:10000;' +
+                        'width:' + cardW + 'px;height:' + cardH + 'px;' +
+                        'opacity:0.85;transform:rotate(1.5deg) scale(1.03);' +
+                        'box-shadow:0 12px 32px rgba(0,0,0,0.5);transition:none;' +
+                        'background:#1e1e1e;border-radius:12px;';
+                    document.body.appendChild(clone);
+
+                    card.classList.add('card-drag-hidden');
+
+                    placeholder = document.createElement('div');
+                    placeholder.className = 'drag-placeholder';
+                    placeholder.style.minHeight = cardH + 'px';
+                    sourceGrid.insertBefore(placeholder, card);
+
+                    container.classList.add('grid-dragging');
+                }
+
+                clone.style.left = (ev.clientX - offsetX) + 'px';
+                clone.style.top = (ev.clientY - offsetY) + 'px';
+
+                // Throttle position updates to one per animation frame
+                if (rafId) cancelAnimationFrame(rafId);
+                var cx = ev.clientX, cy = ev.clientY;
+                rafId = requestAnimationFrame(function () {
+                    rafId = 0;
+                    var targetGrid = findTargetGrid(cy);
+                    if (targetGrid) {
+                        applyPlaceholder(targetGrid, cx, cy);
+                    }
+                });
+            }
+
+            function onUp() {
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                if (rafId) cancelAnimationFrame(rafId);
+                if (!started) return;
+
+                var targetGrid = placeholder ? placeholder.parentNode : sourceGrid;
+                var targetSection = targetGrid ? targetGrid.closest('.category') : null;
+                var targetCategory = targetSection ? targetSection.getAttribute('data-category') : null;
+                var sourceCategory = sourceSection ? sourceSection.getAttribute('data-category') : null;
+                var serviceId = parseInt(card.getAttribute('data-id'), 10);
+
+                // Move card to placeholder position
+                if (placeholder && placeholder.parentNode) {
+                    targetGrid.insertBefore(card, placeholder);
+                    placeholder.remove();
+                }
+                card.classList.remove('card-drag-hidden');
+                container.classList.remove('grid-dragging');
+                if (clone) clone.remove();
+
+                // Collect new order in target grid
+                var allCards = targetGrid.querySelectorAll('.card[data-id]');
+                var ids = Array.from(allCards).map(function (c) {
+                    return parseInt(c.getAttribute('data-id'), 10);
+                });
+
+                if (targetCategory && targetCategory !== sourceCategory) {
+                    moveServiceToCategory(serviceId, targetCategory, ids);
+                } else {
+                    reorderServices(ids);
+                }
+            }
+
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
         });
+    }
+
+    async function moveServiceToCategory(serviceId, newCategory, orderedIds) {
+        await bmFetch(SERVICES_URL + '/' + serviceId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category: newCategory }),
+        });
+        await bmFetch(SERVICES_URL + '/reorder', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: orderedIds }),
+        });
+        await loadAndRenderServices();
     }
 
     async function reorderServices(ids) {
@@ -1217,42 +1434,56 @@
     // --- Group-level Drag-and-Drop (categories + sidebar groups) ---
 
     function setupCategoryDragDrop(container) {
+        var rafPending = false;
+        var lastRef = null;
+
         container.addEventListener('dragover', function (e) {
-            // Only handle category drags (not card drags inside grids)
             var dragging = container.querySelector('.category.dragging-group');
             if (!dragging) return;
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
 
-            var sections = Array.from(container.querySelectorAll('.category:not(.dragging-group)'));
-            var closest = null;
-            var closestDist = Infinity;
+            if (rafPending) return;
+            rafPending = true;
+            var y = e.clientY;
 
-            sections.forEach(function (sec) {
-                var rect = sec.getBoundingClientRect();
-                var centerY = rect.top + rect.height / 2;
-                var dist = Math.abs(e.clientY - centerY);
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closest = sec;
+            requestAnimationFrame(function () {
+                rafPending = false;
+                var dragging = container.querySelector('.category.dragging-group');
+                if (!dragging) return;
+
+                var sections = Array.from(container.querySelectorAll('.category:not(.dragging-group)'));
+                var insertBefore = null;
+
+                for (var i = 0; i < sections.length; i++) {
+                    var rect = sections[i].getBoundingClientRect();
+                    if (y < rect.top + rect.height / 2) {
+                        insertBefore = sections[i];
+                        break;
+                    }
+                }
+
+                // Default: insert before the add-category button
+                if (!insertBefore) {
+                    insertBefore = container.querySelector('.svc-add-cat-btn');
+                }
+
+                if (insertBefore !== lastRef) {
+                    lastRef = insertBefore;
+                    if (insertBefore) {
+                        container.insertBefore(dragging, insertBefore);
+                    } else {
+                        container.appendChild(dragging);
+                    }
                 }
             });
-
-            if (closest) {
-                var rect = closest.getBoundingClientRect();
-                var midY = rect.top + rect.height / 2;
-                if (e.clientY < midY) {
-                    container.insertBefore(dragging, closest);
-                } else {
-                    container.insertBefore(dragging, closest.nextSibling);
-                }
-            }
         });
 
         container.addEventListener('drop', function (e) {
             var dragging = container.querySelector('.category.dragging-group');
             if (!dragging) return;
             e.preventDefault();
+            lastRef = null;
             var sections = container.querySelectorAll('.category[data-category]');
             var names = Array.from(sections).map(function (s) {
                 return s.getAttribute('data-category');
@@ -1386,7 +1617,6 @@
     function setupKeyboardNav() {
         document.addEventListener('keydown', function (e) {
             var searchInput = document.getElementById('search');
-            var braveInput = document.querySelector('#brave-search input');
             var tag = document.activeElement && document.activeElement.tagName;
             var isTyping = tag === 'INPUT' || tag === 'TEXTAREA';
 
@@ -1413,7 +1643,6 @@
                 searchInput.value = '';
                 filterServices('');
                 searchInput.blur();
-                if (braveInput) braveInput.blur();
                 return;
             }
 
@@ -1423,11 +1652,7 @@
                 if (card) {
                     var href = card.href || card.getAttribute('data-url');
                     if (href) {
-                        if (href.startsWith(location.origin + '/')) {
-                            location.href = href;
-                        } else {
-                            window.open(href, '_blank', 'noopener,noreferrer');
-                        }
+                        location.href = href;
                     }
                 }
                 return;

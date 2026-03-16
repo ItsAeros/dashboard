@@ -11,10 +11,6 @@ class Settings(BaseSettings):
     # Database
     database_path: str = "data/pmserver.db"
 
-    # Plaid (Phase 2)
-    plaid_client_id: str = ""
-    plaid_secret: str = ""
-    plaid_env: str = "sandbox"
 
     class Config:
         env_file = ".env"

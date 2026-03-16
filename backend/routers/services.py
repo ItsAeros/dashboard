@@ -1,13 +1,19 @@
 import asyncio
+import os
+import uuid
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from backend.auth import require_auth
 from backend.database import get_db, DB_PATH
 
 router = APIRouter(tags=["services"])
+
+ICON_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "static", "img", "icons")
+ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico"}
+MAX_ICON_SIZE = 2 * 1024 * 1024  # 2MB
 
 
 # --- Request models ---
@@ -126,6 +132,28 @@ def reorder_categories(body: CategoryReorderBody, db=Depends(get_db)):
         )
     db.commit()
     return {"status": "ok"}
+
+
+# --- Auth-required: icon upload ---
+
+@router.post("/services/icons", dependencies=[Depends(require_auth)])
+async def upload_icon(file: UploadFile = File(...)):
+    """Upload an icon image. Returns the URL path to use in the icon field."""
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"File type {ext} not allowed")
+
+    data = await file.read()
+    if len(data) > MAX_ICON_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 2MB)")
+
+    os.makedirs(ICON_DIR, exist_ok=True)
+    filename = f"{uuid.uuid4().hex[:12]}{ext}"
+    filepath = os.path.join(ICON_DIR, filename)
+    with open(filepath, "wb") as f:
+        f.write(data)
+
+    return {"path": f"/img/icons/{filename}"}
 
 
 # --- Auth-required: service CRUD ---
